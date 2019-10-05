@@ -1,6 +1,27 @@
 #ifndef VM_H
 #define VM_H
 
-void print_somthing_nice();
+#include <stddef.h> /* size_t */
 
-#endif
+typedef struct vm vm_t;
+
+typedef void (*err_handler)(const char *message);
+
+enum vm_state
+{
+    VM_READY,
+    VM_RUNNING,
+    VM_HALT,
+    VM_FINISHED
+};
+
+vm_t *vm_create(const char *file_path,
+                unsigned int stack_size,
+                size_t heap_size,
+                err_handler handler);
+
+void vm_free(vm_t *instance);
+
+int vm_run(vm_t *instance);
+
+#endif // VM_H
