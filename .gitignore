@@ -7,6 +7,10 @@
 *.obj
 *.elf
 
+# Class files
+*.class
+*.jar
+
 # Linker output
 *.ilk
 *.map
