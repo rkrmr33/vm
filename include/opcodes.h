@@ -15,7 +15,8 @@ enum opcodes
     * special operations
     */
     op_noop   = 0x00, // no operation
-    
+    op_print  = 0x01, // print the variable at the top of the stack
+
     /*
     * Integer operations
     */

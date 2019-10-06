@@ -2,6 +2,8 @@
 
 /* special operations */
 void opcode_noop(vm_t *instance);
+void opcode_print(vm_t *instance);
+
 
 /* integer operations */
 void opcode_iload(vm_t *instance);
@@ -21,6 +23,9 @@ void opcodes_init(opcode_handler handlers[])
     {
         handlers[i] = op_noop;
     }
+
+    /* special operations */
+    handlers[op_print] = opcode_print;
 
     /* integer operations */
     handlers[op_iload] = opcode_iload;

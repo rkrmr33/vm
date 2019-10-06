@@ -16,8 +16,6 @@ build_test: $(TESTS)
 
 .PHONY: compiler
 compiler: $(COMPILER_FOLDER)/$(COMPILER)
-	@echo "Running compiler..."
-	@java -jar $(COMPILER_FOLDER)/$(COMPILER)
 	
 bin/%: test/%.c $(LIB)
 	gcc -o $@ $< -Iinclude/ -Llib/ -l$(LIB_NAME)
@@ -26,7 +24,7 @@ obj/%.o: src/%.c
 	gcc -fPIC -c -o $@ $< -I include/
 
 $(COMPILER_FOLDER)/$(COMPILER): $(COMPILER_CLASS_FILES)
-	@echo "Building compiler"
+	@echo "Building compiler..."
 	@echo "Main-Class: BytecodeCompiler" > $(COMPILER_FOLDER)/manifest.txt
 	@echo "Class-Path: class/" >> $(COMPILER_FOLDER)/manifest.txt
 	@jar -cvfm $(COMPILER_FOLDER)/$(COMPILER) $(COMPILER_FOLDER)/manifest.txt $(COMPILER_FOLDER)/class/*.class 1>/dev/null
