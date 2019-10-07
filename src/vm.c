@@ -4,6 +4,7 @@
 #include <sys/mman.h>  /* mmap      */
 #include <sys/stat.h>  /* fstat     */
 #include <fcntl.h>     /* O_RDONLY  */
+#include <string.h>    /* strlen    */
 
 #include "opcodes.h"   /* opcodes */
 #include "vm_impl.h"   /* private vm header */
@@ -18,6 +19,7 @@
 static int load_bytecode_from_file(const char *file_path, vm_t *instance);
 static void default_err_handler(const char *message);
 static void print_vm_value(vm_value_t *vm_value);
+static void build_constant_pool(vm_t *instance);
 
 vm_t *vm_create(const char *file_path,
                 unsigned int stack_size,
@@ -46,10 +48,11 @@ vm_t *vm_create(const char *file_path,
         return NULL;
     }
 
-    new_instance->constant_pool_size = *(unsigned int *)new_instance->code;
-    printf("[+] constantpool_size: %u\n", new_instance->constant_pool_size);
+    build_constant_pool(new_instance);
+    // new_instance->constant_pool_size = *(unsigned int *)new_instance->code;
+    // printf("[+] constantpool_size: %u\n", new_instance->constant_pool_size);
 
-    new_instance->constant_pool = (vm_value_t *)((int *)new_instance->code + 1);
+    // new_instance->constant_pool = (vm_value_t *)((int *)new_instance->code + 1);
 
     print_vm_value(&new_instance->constant_pool[0]);
 
@@ -144,5 +147,54 @@ static void print_vm_value(vm_value_t *vm_value)
     
         default:
             break;
+    }
+}
+
+static void build_constant_pool(vm_t *instance)
+{
+    char *reader = instance->code;
+    char curOp = *reader++;
+    vm_value_t value;
+    int size = 0;
+
+
+
+    while (op_const == curOp) {
+        int type = (int)*reader++;
+        value.type = type;
+        
+        printf("type: %d\n", curOp);
+        printf("type: %d\n", type);
+
+        switch (type)
+        {
+            case INTEGER_TYPE:
+                value.value.integer_value = *((int *)reader);
+                reader += sizeof(int);
+                break;
+
+            case FLOAT_TYPE:
+                // TODO: add float type support 
+                break;
+
+            case STRING_TYPE:
+                size = strlen(reader);
+                value.value.string_value = malloc(sizeof(char) * (size + 1));
+                assert(NULL != value.value.string_value);
+                strcpy(value.value.string_value, reader);
+                reader += size + 1;
+                break;
+
+            case REFERENCE_TYPE:
+                // TODO: add reference type support 
+                break;
+        
+            default:
+                break;
+        }
+
+        print_vm_value(&value);
+
+        break;
     }
 }

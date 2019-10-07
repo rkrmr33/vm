@@ -1,9 +1,16 @@
 #include <stdio.h>
 #include "vm.h"
 
-int main() 
+int main(int argc, char *argv[]) 
 {
-    vm_t *new_vm = vm_create("/home/roikramer/Desktop/vm/test/bytecode_test", 0, 0, NULL);
+    if (argc < 2)
+    {
+        puts("[-] missing file name!");
+    }
+    else 
+    {
+        vm_t *new_vm = vm_create(argv[1], 0, 0, NULL);
+    }
 
     return 0;
 }

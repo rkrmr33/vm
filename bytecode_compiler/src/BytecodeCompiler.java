@@ -17,8 +17,16 @@ public class BytecodeCompiler {
                 compiler.compile();
             } catch (FileNotFoundException e) {
                 System.out.println("file not found: " + inputFile);
+                System.exit(1);
             } catch (IOException e) {
                 System.out.println("invalid file name: " + outputFile);
+                System.exit(1);
+            } catch (Compiler.IllegalOpcodeException e) {
+                System.out.println(e);
+                System.exit(1);
+            } catch (Compiler.UnknownTypeException e) {
+                System.out.println(e);
+                System.exit(1);
             }
         }
     }

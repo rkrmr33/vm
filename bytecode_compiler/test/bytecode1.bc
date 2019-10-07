@@ -1,16 +1,14 @@
-{
-    [STRING_TYPE, "hello"]
-    [INTEGER_TYPE, 1234]
-}
-main:
-    {
-        [INTEGER_TYPE, 12]
-        [INTEGER_TYPE, 5]
-    }
-    iload 0
-    iload 1
-    iadd
-    print @should be 17
-    iload #1
-    iadd
-    print @should be 1251
+const STRING_TYPE "hello"
+const INTEGER_TYPE 1234
+
+@ main:
+@ local INTEGER_TYPE 12
+@ local INTEGER_TYPE 5
+@ 
+@ iload 0
+@ iload 1
+@ iadd
+@ print @should be 17
+@ iload #1
+@ iadd
+@ print @should be 1251

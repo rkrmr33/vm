@@ -15,7 +15,8 @@ enum opcodes
     * special operations
     */
     op_noop   = 0x00, // no operation
-    op_print  = 0x01, // print the variable at the top of the stack
+    op_const  = 0x01, // declares a constant in the constant pool
+    op_local  = 0x02, // declares a local variable
 
     /*
     * Integer operations
@@ -27,6 +28,7 @@ enum opcodes
     op_imult  = 0x14, // multiplies two integers loaded to op stack and pushes back the result
     op_idiv   = 0x15, // divides two integers loaded to op stack and pushes back the result
     op_ineg   = 0x16, // negates the integer at the top of the op stack
+    op_iprint = 0x17, // print the integer at the top of the stack
 
     /*
     * constant pool operations

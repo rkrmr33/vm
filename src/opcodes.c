@@ -2,7 +2,8 @@
 
 /* special operations */
 void opcode_noop(vm_t *instance);
-void opcode_print(vm_t *instance);
+void opcode_const(vm_t *instance);
+void opcode_local(vm_t *instance);
 
 
 /* integer operations */
@@ -13,6 +14,7 @@ void opcode_isub(vm_t *instance);
 void opcode_imult(vm_t *instance);
 void opcode_idiv(vm_t *instance);
 void opcode_ineg(vm_t *instance);
+void opcode_iprint(vm_t *instance);
 
 /* constant pool operatios */
 void opcode_cload(vm_t *instance);
@@ -25,7 +27,8 @@ void opcodes_init(opcode_handler handlers[])
     }
 
     /* special operations */
-    handlers[op_print] = opcode_print;
+    handlers[op_const] = opcode_iprint;
+    handlers[op_local] = opcode_local;
 
     /* integer operations */
     handlers[op_iload] = opcode_iload;
@@ -35,6 +38,7 @@ void opcodes_init(opcode_handler handlers[])
     handlers[op_imult] = opcode_imult;
     handlers[op_idiv] = opcode_idiv;
     handlers[op_ineg] = opcode_ineg;
+    handlers[op_iprint] = opcode_iprint;
 
     /* constant pool operatios */
     handlers[op_cload] = opcode_cload;
@@ -44,6 +48,16 @@ void opcodes_init(opcode_handler handlers[])
  * special operations 
  */
 void opcode_noop(vm_t *instance)
+{
+
+}
+
+void opcode_const(vm_t *instance)
+{
+
+}
+
+void opcode_local(vm_t *instance)
 {
 
 }
@@ -82,6 +96,11 @@ void opcode_idiv(vm_t *instance)
 }
 
 void opcode_ineg(vm_t *instance)
+{
+
+}
+
+void opcode_iprint(vm_t *instance)
 {
 
 }
