@@ -25,6 +25,7 @@ typedef struct vm_value
 
 struct vm
 {
+    unsigned int magic_num; // magic number
     unsigned int ip; // program counter
     unsigned int sp; // stack pointer
 

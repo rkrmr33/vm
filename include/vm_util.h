@@ -3,6 +3,8 @@
 
 #include "vm_impl.h"
 
+int validate_magic_number(vm_t *instance);
+
 void print_vm_value(vm_value_t *vm_value);
 
 int read_int_value(vm_t *instance);

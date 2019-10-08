@@ -1,6 +1,5 @@
 import java.io.IOException;
 import java.io.FileNotFoundException;
-import java.util.Scanner;
 
 public class BytecodeCompiler {
     public static void main(String args[]) {

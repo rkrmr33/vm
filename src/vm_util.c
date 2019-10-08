@@ -11,6 +11,13 @@
 #define FILE_PERM O_RDONLY
 #define MAP_PERM PROT_READ
 
+int validate_magic_number(vm_t *instance)
+{
+    assert(instance && instance->code);
+
+    return instance->magic_num != read_int_value(instance);
+}
+
 void print_vm_value(vm_value_t *vm_value)
 {
     assert(vm_value);

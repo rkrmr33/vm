@@ -10,6 +10,7 @@
 #include "vm.h"        /* public vm header */
 
 #define DEFAULT_ERR_HANDLER default_err_handler
+#define MAGIC_NUM 0xBABEFACE
 
 static void default_err_handler(const char *message);
 static int build_constant_pool(vm_t *instance);
@@ -32,6 +33,8 @@ vm_t *vm_create(const char *file_path,
 
     memset(new_instance, 0, sizeof(vm_t)); // zero all fields
 
+    new_instance->magic_num = MAGIC_NUM; // set magic number
+
     if (NULL == handler)
     {
         new_instance->error_handler = DEFAULT_ERR_HANDLER;
@@ -40,6 +43,16 @@ vm_t *vm_create(const char *file_path,
     res = load_bytecode_from_file(file_path, new_instance);
     if (0 != res)
     {
+        vm_free(new_instance);
+
+        return NULL;
+    }
+
+    res = validate_magic_number(new_instance);
+    if (0 != res)
+    {
+        new_instance->error_handler("file with wrong magic number!");
+        new_instance->error_handler(file_path);
         vm_free(new_instance);
 
         return NULL;

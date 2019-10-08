@@ -1,33 +1,34 @@
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.function.Consumer;
 import java.util.HashMap;
 
 public class Compiler {
-    private FileReader input;
-    private FileWriter output;
+    private static final int MAGIC_NUMBER = 0xBABEFACE;
+    private String inputFilename = null;
+    private String outputFilename = null;
+    private FileOutputStream output;
     private Map<String, Opcode> opcodes = new HashMap<>();
     private Map<String, Character> types = new HashMap<>();
 
-    public Compiler(String inputFilename, String outputFilename) 
-    throws FileNotFoundException, IOException {
-        input = new FileReader(inputFilename);
-        output = new FileWriter(outputFilename);
-
+    public Compiler(String inputFilename, String outputFilename) {
+        this.inputFilename = inputFilename;
+        this.outputFilename = outputFilename;
+        
         initOpcodes();
         initTypes();
     }
 
     public void compile() 
-    throws IOException, IllegalOpcodeException {
-        int curByte = 0;
-        Scanner scn = new Scanner(input);
+    throws IOException, IllegalOpcodeException, FileNotFoundException {
+        Scanner scn = null;
+        output = new FileOutputStream(outputFilename);
 
-        output.write(""); // clear file
+        scn = new Scanner(new FileReader(inputFilename));
+        output.write(getIntBytes(MAGIC_NUMBER)); // write magic number
 
         while (scn.hasNextLine()) {
             String opcodeName = scn.next();
@@ -46,37 +47,39 @@ public class Compiler {
 
         System.out.println("Compilation finished!");
         output.flush();
+        output.close();
+        scn.close();
     }
 
     public void initOpcodes() {
         opcodes.put("@", new Opcode(0xFF, (scn, code) -> scn.nextLine()));
         
-        opcodes.put("noop", new Opcode(0x00, (scn, code) -> output.append((char)code)));
+        opcodes.put("noop", new Opcode(0x00, (scn, code) -> output.write((byte)code)));
         
         opcodes.put("const", new Opcode(0x01, (scn, code) -> {
-            output.append((char)code);
+            output.write((byte)code);
             int size = scn.nextInt();
-            output.append(new String(getIntBytes(size)));
+            output.write(getIntBytes(size));
         }));
 
         opcodes.put("local", new Opcode(0x02, (scn, code) -> {
-            output.append((char)code);
+            output.write((byte)code);
             int size = scn.nextInt();
-            output.append(new String(getIntBytes(size)));
+            output.write(getIntBytes(size));
         }));
 
         opcodes.put("iconst", new Opcode(0x51, (scn, code) -> { 
-            output.append((char)code);
+            output.write((byte)code);
             int val = scn.nextInt();
-            output.append(new String(getIntBytes(val))); 
+            output.write(getIntBytes(val));
         }));
 
         opcodes.put("sconst", new Opcode(0x53, (scn, code) -> {
-            output.append((char)code);
+            output.write((byte)code);
             String str = scn.nextLine().trim();
             char[] cStr = str.subSequence(1, str.length()).toString().toCharArray();
             cStr[cStr.length - 1] = (char)0x0;
-            output.append(new String(cStr));
+            output.write(new String(cStr).getBytes());
         }));
 
         // opcodes.put("local",  0x02);
@@ -101,17 +104,19 @@ public class Compiler {
     }
 
     public static class IllegalOpcodeException extends Exception {
+        private static final long serialVersionUID = -5139052286656814625L;
+
         public IllegalOpcodeException(String msg) {
             super(msg);
         }
     }
 
-    private char[] getIntBytes(int val) {
-        return new char[] {
-            (char)(0xFF & val)
-            , (char)(((0xFF << 8) & val) >> 8)
-            , (char)(((0xFF << 16) & val) >> 16)
-            , (char)(((0xFF << 24) & val) >> 24)
+    private byte[] getIntBytes(int val) {
+        return new byte[] {
+              (byte)(0xFF & val)
+            , (byte)(((0xFF << 8) & val) >> 8)
+            , (byte)(((0xFF << 16) & val) >> 16)
+            , (byte)(((0xFF << 24) & val) >> 24)
         };
     }
 
