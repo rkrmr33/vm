@@ -9,6 +9,7 @@ typedef void (*err_handler)(const char *message);
 
 enum vm_state
 {
+    VM_INIT,
     VM_READY,
     VM_RUNNING,
     VM_HALT,

@@ -11,8 +11,11 @@
 
 #define DEFAULT_ERR_HANDLER default_err_handler
 #define MAGIC_NUM 0xBABEFACE
+#define DEFAULT_HEAP_SIZE 1000000 // 1mb
+#define DEFAULT_STACK_SIZE 100000 // 100kb 
 
 static void default_err_handler(const char *message);
+static int init_vm_fields(vm_t *instance, err_handler handler);
 static int build_constant_pool(vm_t *instance);
 
 vm_t *vm_create(const char *file_path,
@@ -31,13 +34,12 @@ vm_t *vm_create(const char *file_path,
         return NULL;
     }
 
-    memset(new_instance, 0, sizeof(vm_t)); // zero all fields
-
-    new_instance->magic_num = MAGIC_NUM; // set magic number
-
-    if (NULL == handler)
+    res = init_vm_fields(new_instance, handler);
+    if (0 != res)
     {
-        new_instance->error_handler = DEFAULT_ERR_HANDLER;
+        vm_free(new_instance);
+
+        return NULL;
     }
 
     res = load_bytecode_from_file(file_path, new_instance);
@@ -65,6 +67,8 @@ vm_t *vm_create(const char *file_path,
 
         return NULL;
     }
+
+    new_instance->state = VM_READY;
 
     return new_instance;
 }
@@ -139,7 +143,37 @@ static int build_constant_pool(vm_t *instance)
     return 0;
 }
 
+static int init_vm_fields(vm_t *instance, err_handler handler)
+{
+    assert(instance);
+
+    memset(instance, 0, sizeof(vm_t));
+
+    instance->state = VM_INIT;
+    instance->magic_num = MAGIC_NUM;
+    instance->heap_size = DEFAULT_HEAP_SIZE;
+    instance->stack_size = DEFAULT_STACK_SIZE;
+    instance->error_handler = (NULL == handler ? DEFAULT_ERR_HANDLER : handler);
+
+    instance->heap = malloc(sizeof(char) * instance->heap_size);
+    if (NULL == instance->heap)
+    {
+        return -1;
+    }
+
+    instance->stack = malloc(sizeof(char) * instance->stack_size);
+    if (NULL == instance->stack)
+    {
+        return -1;
+    }
+
+    return 0;
+}
+
 static void default_err_handler(const char *message)
 {
+    assert(message);
+
     printf("[-] %s\n", message);
 }
+

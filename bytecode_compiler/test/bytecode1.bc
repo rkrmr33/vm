@@ -1,8 +1,9 @@
-const 4
+const 5
 sconst "hello"
 iconst 1234
 sconst " world"
 sconst "meow"
+sconst "Hello roi, I am the VM"
 
 @ main:
 @ ilocal 12
@@ -12,6 +13,6 @@ sconst "meow"
 @ iload 1
 @ iadd
 @ iprint @should be 17
-@ iload #1
+@ icload 0
 @ iadd
 @ iprint @should be 1251
