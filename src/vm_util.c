@@ -166,10 +166,13 @@ void free_code(vm_t *instance)
     int res = 0;
     assert(instance);
 
-    res = munmap(instance->code, instance->code_size);
-    if (0 != res)
+    if (NULL != instance->code) 
     {
-        instance->error_handler("error: could not unmap file");
+        res = munmap(instance->code, instance->code_size);
+        if (0 != res)
+        {
+            instance->error_handler("error: could not unmap file");
+        }
     }
 
     instance->code = NULL;
