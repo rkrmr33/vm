@@ -10,12 +10,8 @@ import java.util.HashMap;
 public class Compiler {
     private FileReader input;
     private FileWriter output;
-    private Map<String, InputProcessor> opcodes = new HashMap<>();
-    private Map<String, Integer> types = new HashMap<>();
-
-    private interface InputProcessor {
-        void process(Scanner input) throws IOException, UnknownTypeException;
-    }
+    private Map<String, Opcode> opcodes = new HashMap<>();
+    private Map<String, Character> types = new HashMap<>();
 
     public Compiler(String inputFilename, String outputFilename) 
     throws FileNotFoundException, IOException {
@@ -27,20 +23,24 @@ public class Compiler {
     }
 
     public void compile() 
-    throws IOException, UnknownTypeException, IllegalOpcodeException {
+    throws IOException, IllegalOpcodeException {
         int curByte = 0;
         Scanner scn = new Scanner(input);
 
         output.write(""); // clear file
 
         while (scn.hasNextLine()) {
-            String nextOpcode = scn.next();
-            InputProcessor inputProcessor = opcodes.get(nextOpcode);
+            String opcodeName = scn.next();
+            Opcode curOpcode = opcodes.get(opcodeName);
 
-            if (null == inputProcessor) {
-                throw new IllegalOpcodeException("unknown opcode: " + nextOpcode);
+            if (null == curOpcode) {
+                throw new IllegalOpcodeException("unknown opcode: " + opcodeName);
             } else {
-                inputProcessor.process(scn);
+                try {
+                    curOpcode.process(scn);
+                } catch (IOException e) {
+                    System.out.println(e);
+                }
             }
         }
 
@@ -49,33 +49,36 @@ public class Compiler {
     }
 
     public void initOpcodes() {
-        opcodes.put("@", (scn) -> scn.nextLine());
+        opcodes.put("@", new Opcode(0xFF, (scn, code) -> scn.nextLine()));
         
-        opcodes.put("noop",   (scn) -> output.append((char)0x00));
+        opcodes.put("noop", new Opcode(0x00, (scn, code) -> output.append((char)code)));
         
-        opcodes.put("const",  (scn) -> { 
-            output.append((char)0x01);
-            String typeName = scn.next();
-            try {
-                int type = types.get(typeName);
-                switch (type) {
-                    case 0x01: // INTEGER_TYPE
-                        int val = scn.nextInt();
-                        output.append(new String(getIntBytes(val))); 
-                        break;
-                    case 0x02: // FLOAT_TYPE
-                        break;
-                    case 0x03: // STRING_TYPE
-                        String str = scn.nextLine().trim();
-                        char[] cStr = str.subSequence(1, str.length()).toString().toCharArray();
-                        cStr[cStr.length - 1] = (char)0x0;
-                        output.append(new String(cStr));
-                        break;
-                }
-            } catch (NullPointerException e) {
-                throw new UnknownTypeException("unknown type: " + typeName);
-            }
-        });
+        opcodes.put("const", new Opcode(0x01, (scn, code) -> {
+            output.append((char)code);
+            int size = scn.nextInt();
+            output.append(new String(getIntBytes(size)));
+        }));
+
+        opcodes.put("local", new Opcode(0x02, (scn, code) -> {
+            output.append((char)code);
+            int size = scn.nextInt();
+            output.append(new String(getIntBytes(size)));
+        }));
+
+        opcodes.put("iconst", new Opcode(0x51, (scn, code) -> { 
+            output.append((char)code);
+            int val = scn.nextInt();
+            output.append(new String(getIntBytes(val))); 
+        }));
+
+        opcodes.put("sconst", new Opcode(0x53, (scn, code) -> {
+            output.append((char)code);
+            String str = scn.nextLine().trim();
+            char[] cStr = str.subSequence(1, str.length()).toString().toCharArray();
+            cStr[cStr.length - 1] = (char)0x0;
+            output.append(new String(cStr));
+        }));
+
         // opcodes.put("local",  0x02);
 
         // opcodes.put("iload",  0x10);
@@ -91,16 +94,10 @@ public class Compiler {
     }
 
     public void initTypes() {
-        types.put("INTEGER_TYPE",   0x01);
-        types.put("FLOAT_TYPE",     0x02);
-        types.put("STRING_TYPE",    0x03);
-        types.put("REFERENCE_TYPE", 0x04);
-    }
-
-    public static class UnknownTypeException extends Exception {
-        public UnknownTypeException(String msg) {
-            super(msg);
-        }
+        types.put("INTEGER_TYPE",   (char)0x01);
+        types.put("FLOAT_TYPE",     (char)0x02);
+        types.put("STRING_TYPE",    (char)0x03);
+        types.put("REFERENCE_TYPE", (char)0x04);
     }
 
     public static class IllegalOpcodeException extends Exception {
@@ -116,5 +113,27 @@ public class Compiler {
             , (char)(((0xFF << 16) & val) >> 16)
             , (char)(((0xFF << 24) & val) >> 24)
         };
+    }
+
+    private static class Opcode {
+        private int code;
+        private InputProcessor inputProcessor;
+
+        public Opcode(int code, InputProcessor inputProcessor) {
+            this.code = code;
+            this.inputProcessor = inputProcessor;
+        }
+
+        public int getCode() {
+            return code;
+        }
+
+        public void process(Scanner scn) throws IOException {
+            inputProcessor.process(scn, getCode());
+        }
+    }
+
+    private interface InputProcessor {
+        void process(Scanner input, int code) throws IOException;
     }
 }

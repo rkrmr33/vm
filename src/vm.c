@@ -1,25 +1,18 @@
 #include <assert.h>    /* assert    */
 #include <stdio.h>     /* perror    */
 #include <stdlib.h>    /* malloc    */
-#include <sys/mman.h>  /* mmap      */
-#include <sys/stat.h>  /* fstat     */
-#include <fcntl.h>     /* O_RDONLY  */
 #include <string.h>    /* strlen    */
 
 #include "opcodes.h"   /* opcodes */
 #include "vm_impl.h"   /* private vm header */
+#include "vm_util.h"   /* utility functions */
 
 #include "vm.h"        /* public vm header */
 
-#define FILE_PERM O_RDONLY
-#define MAP_PERM PROT_READ
-
 #define DEFAULT_ERR_HANDLER default_err_handler
 
-static int load_bytecode_from_file(const char *file_path, vm_t *instance);
 static void default_err_handler(const char *message);
-static void print_vm_value(vm_value_t *vm_value);
-static void build_constant_pool(vm_t *instance);
+static int build_constant_pool(vm_t *instance);
 
 vm_t *vm_create(const char *file_path,
                 unsigned int stack_size,
@@ -37,6 +30,8 @@ vm_t *vm_create(const char *file_path,
         return NULL;
     }
 
+    memset(new_instance, 0, sizeof(vm_t)); // zero all fields
+
     if (NULL == handler)
     {
         new_instance->error_handler = DEFAULT_ERR_HANDLER;
@@ -45,30 +40,30 @@ vm_t *vm_create(const char *file_path,
     res = load_bytecode_from_file(file_path, new_instance);
     if (0 != res)
     {
+        vm_free(new_instance);
+
         return NULL;
     }
 
-    build_constant_pool(new_instance);
-    // new_instance->constant_pool_size = *(unsigned int *)new_instance->code;
-    // printf("[+] constantpool_size: %u\n", new_instance->constant_pool_size);
+    res = build_constant_pool(new_instance);
+    if (0 != res) 
+    {
+        vm_free(new_instance);
 
-    // new_instance->constant_pool = (vm_value_t *)((int *)new_instance->code + 1);
-
-    print_vm_value(&new_instance->constant_pool[0]);
+        return NULL;
+    }
 
     return new_instance;
 }
 
 void vm_free(vm_t *instance)
 {   
-    int res = 0;
+    assert(instance);
 
-    res = munmap(instance->code, instance->code_size);
-    if (0 != res)
-    {
-        instance->error_handler("error: could not unmap file");
-    }
-    instance->code = NULL;
+    free_heap(instance);
+    free_stack(instance);
+    free_constant_pool(instance);
+    free_code(instance);
 
     free(instance);
     instance = NULL;
@@ -78,123 +73,60 @@ int vm_run(vm_t *instance);
 
 
 /* STATIC FUNCTIONS */
-static int load_bytecode_from_file(const char *file_path, vm_t *instance)
+static int build_constant_pool(vm_t *instance)
 {
-    int res = 0, fd = 0;
-    size_t file_size = 0;
-    struct stat file_stat = {0};
+    char cur_opcode = 0;
+    vm_value_t *cur_value = NULL;
+    int size = 0;
 
-    assert(NULL != file_path);
-    assert(NULL != instance);
+    assert(instance);
 
-    fd = open(file_path, FILE_PERM);
-    if (-1 == fd)
-    {
-        instance->error_handler("error: could not open file:");
-        instance->error_handler(file_path);
+    cur_opcode = read_opcode(instance);
 
+    if (OP_CONST != cur_opcode) {
         return -1;
     }
 
-    res = fstat(fd, &file_stat);
-    if (0 != res)
-    {
-        instance->error_handler("error: could not read file:");
-        instance->error_handler(file_path);
+    instance->constant_pool_size = read_int_value(instance);
+    printf("[+] constant_pool_size: %u\n", instance->constant_pool_size);
 
+    instance->constant_pool = (vm_value_t *)malloc(instance->constant_pool_size * sizeof(vm_value_t));
+    if (NULL == instance->constant_pool)
+    {
         return -1;
     }
 
-    file_size = file_stat.st_size;
-
-    instance->code = (char *)mmap(NULL, file_size, MAP_PERM, MAP_PRIVATE, fd, 0);
-    if (MAP_FAILED == instance->code)
+    for (int i = 0; i < instance->constant_pool_size; ++i)
     {
-        instance->error_handler("error: could not map file:");
-        instance->error_handler(file_path);
+        cur_opcode = read_opcode(instance);
+        cur_value = &(instance->constant_pool[i]);
+        
+        switch (cur_opcode)
+        {
+            case OP_SCONST: // STRING_TYPE constant
+                cur_value->type = STRING_TYPE;
+                cur_value->value.string_value = read_string_value(instance);
+                if (NULL == cur_value->value.string_value)
+                {
+                    return -1;
+                }
+                break;
+            case OP_ICONST: // INTEGER_TYPE constant
+                cur_value->type = INTEGER_TYPE;
+                cur_value->value.integer_value = read_int_value(instance);
+                break;
+            default:
+                instance->error_handler("constant_pool_load: unknown type");
+                return -1;
+        }
 
-        return -1;
+        print_vm_value(cur_value);
     }
-    instance->code_size = file_size;
-
+    
     return 0;
 }
 
 static void default_err_handler(const char *message)
 {
     printf("[-] %s\n", message);
-}
-
-static void print_vm_value(vm_value_t *vm_value)
-{
-    switch (vm_value->type)
-    {
-        case INTEGER_TYPE:
-            printf("{ type: int, value: %d}\n", vm_value->value.integer_value);
-            break;
-
-        case FLOAT_TYPE:
-            printf("{ type: float, value: %f}\n", vm_value->value.float_value);
-            break;
-
-        case STRING_TYPE:
-            printf("{ type: string, value: \"%s\"}\n", vm_value->value.string_value);
-            break;
-
-        case REFERENCE_TYPE:
-            printf("{ type: ref, value: %p}\n", vm_value->value.reference_value);
-            break;
-    
-        default:
-            break;
-    }
-}
-
-static void build_constant_pool(vm_t *instance)
-{
-    char *reader = instance->code;
-    char curOp = *reader++;
-    vm_value_t value;
-    int size = 0;
-
-
-
-    while (op_const == curOp) {
-        int type = (int)*reader++;
-        value.type = type;
-        
-        printf("type: %d\n", curOp);
-        printf("type: %d\n", type);
-
-        switch (type)
-        {
-            case INTEGER_TYPE:
-                value.value.integer_value = *((int *)reader);
-                reader += sizeof(int);
-                break;
-
-            case FLOAT_TYPE:
-                // TODO: add float type support 
-                break;
-
-            case STRING_TYPE:
-                size = strlen(reader);
-                value.value.string_value = malloc(sizeof(char) * (size + 1));
-                assert(NULL != value.value.string_value);
-                strcpy(value.value.string_value, reader);
-                reader += size + 1;
-                break;
-
-            case REFERENCE_TYPE:
-                // TODO: add reference type support 
-                break;
-        
-            default:
-                break;
-        }
-
-        print_vm_value(&value);
-
-        break;
-    }
 }

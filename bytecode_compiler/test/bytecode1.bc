@@ -1,14 +1,16 @@
-const STRING_TYPE "hello"
-const INTEGER_TYPE 1234
+const 3
+sconst "hello"
+iconst 1234
+sconst " world"
 
 @ main:
-@ local INTEGER_TYPE 12
-@ local INTEGER_TYPE 5
+@ ilocal 12
+@ ilocal 5
 @ 
 @ iload 0
 @ iload 1
 @ iadd
-@ print @should be 17
+@ iprint @should be 17
 @ iload #1
 @ iadd
-@ print @should be 1251
+@ iprint @should be 1251

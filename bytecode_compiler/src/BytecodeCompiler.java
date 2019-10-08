@@ -24,9 +24,6 @@ public class BytecodeCompiler {
             } catch (Compiler.IllegalOpcodeException e) {
                 System.out.println(e);
                 System.exit(1);
-            } catch (Compiler.UnknownTypeException e) {
-                System.out.println(e);
-                System.exit(1);
             }
         }
     }

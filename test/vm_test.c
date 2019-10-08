@@ -10,6 +10,10 @@ int main(int argc, char *argv[])
     else 
     {
         vm_t *new_vm = vm_create(argv[1], 0, 0, NULL);
+        if (NULL != new_vm)
+        {
+            vm_free(new_vm);
+        }
     }
 
     return 0;
