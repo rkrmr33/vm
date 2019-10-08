@@ -52,27 +52,15 @@ public class Compiler {
     }
 
     public void initOpcodes() {
-        opcodes.put("@", new Opcode(0xFF, (scn, code) -> scn.nextLine()));
+        opcodes.put("@", new Opcode(0xFF, (scn, code) -> skip(scn)));
         
-        opcodes.put("noop", new Opcode(0x00, (scn, code) -> output.write((byte)code)));
+        opcodes.put("noop", new Opcode(0x00, (scn, code) -> writeNoArgOpcode(code)));
         
-        opcodes.put("const", new Opcode(0x01, (scn, code) -> {
-            output.write((byte)code);
-            int size = scn.nextInt();
-            output.write(getIntBytes(size));
-        }));
+        opcodes.put("const", new Opcode(0x01, (scn, code) -> writeSingleIntOpcode(scn, code)));
 
-        opcodes.put("local", new Opcode(0x02, (scn, code) -> {
-            output.write((byte)code);
-            int size = scn.nextInt();
-            output.write(getIntBytes(size));
-        }));
+        opcodes.put("local", new Opcode(0x02, (scn, code) -> writeSingleIntOpcode(scn, code)));
 
-        opcodes.put("iconst", new Opcode(0x51, (scn, code) -> { 
-            output.write((byte)code);
-            int val = scn.nextInt();
-            output.write(getIntBytes(val));
-        }));
+        opcodes.put("iconst", new Opcode(0x51, (scn, code) -> writeSingleIntOpcode(scn, code)));
 
         opcodes.put("sconst", new Opcode(0x53, (scn, code) -> {
             output.write((byte)code);
@@ -81,8 +69,6 @@ public class Compiler {
             cStr[cStr.length - 1] = (char)0x0;
             output.write(new String(cStr).getBytes());
         }));
-
-        // opcodes.put("local",  0x02);
 
         // opcodes.put("iload",  0x10);
         // opcodes.put("istore", 0x11);
@@ -118,6 +104,20 @@ public class Compiler {
             , (byte)(((0xFF << 16) & val) >> 16)
             , (byte)(((0xFF << 24) & val) >> 24)
         };
+    }
+
+    private void writeNoArgOpcode(int code) throws IOException {
+        output.write((byte)code);
+    }
+
+    private void writeSingleIntOpcode(Scanner scn, int code) throws IOException {
+        output.write((byte)code);
+        int size = scn.nextInt();
+        output.write(getIntBytes(size));
+    }
+
+    private void skip(Scanner scn) {
+        scn.nextLine();
     }
 
     private static class Opcode {
