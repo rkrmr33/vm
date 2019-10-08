@@ -38,7 +38,7 @@ int opcode_scload(vm_t *instance);
 int opcode_sconst(vm_t *instance);
 
 
-void init_opcode_handlers(opcode_handler handlers[]) 
+void init_opcode_handlers(opcode_handler *handlers) 
 {
     for (int i = 0; i < NUM_OPCODES; ++i)
     {
@@ -101,12 +101,31 @@ int opcode_const(vm_t *instance)
 int opcode_local(vm_t *instance) 
 {
     int local_var_arr_size = 0;
+    int old_op_stk_size = 0;
+    vm_value_t *old_sp = NULL;
     
     assert(instance);
 
     local_var_arr_size = read_int_value(instance);
 
-    printf("local var arr size %d\n", local_var_arr_size);
+    // save old stack pointer
+    old_sp = (vm_value_t *)&instance->stack[instance->sp];
+
+    old_op_stk_size = ((char *)instance->operands_stack - (char *)old_sp - sizeof(vm_value_t));
+
+    // move stack pointer to a new location
+    instance->sp += old_op_stk_size + sizeof(vm_value_t) * local_var_arr_size;
+
+    // place start of local var array at the top of the old op stk
+    instance->local_vars_arr = instance->operands_stack;
+
+    // place new op stk head above the new sp
+    instance->operands_stack = (vm_value_t *)(&instance->stack[instance->sp]) + 1;
+
+    instance->
+
+    // TODO: remove
+    printf("allocated space for %d locals\n", local_var_arr_size);
 
     return 0;
 }

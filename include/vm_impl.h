@@ -38,6 +38,9 @@ struct vm
     vm_value_t *constant_pool; // a segment of code that contains constants
     unsigned int constant_pool_size;
 
+    vm_value_t *local_vars_arr; // a pointer to the local variables array
+    vm_value_t *operands_stack; // a pointer to the head of the operand stack
+
     opcode_handler opcode_handlers[NUM_OPCODES]; // a lookup table for all the op-code handlers
 
     char *code; // a pointer to the bytecode instructions

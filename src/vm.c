@@ -188,6 +188,8 @@ static int init_vm_fields(vm_t *instance, err_handler handler)
         return -1;
     }
 
+    instance->local_vars_arr = (vm_value_t *)instance->stack;
+    instance->operands_stack = (vm_value_t *)instance->stack;
     init_opcode_handlers(instance->opcode_handlers);
 
     return 0;

@@ -7,7 +7,7 @@
 
 typedef int (*opcode_handler)(vm_t *instance);
 
-void init_opcode_handlers(opcode_handler handlers[]);
+void init_opcode_handlers(opcode_handler *handlers);
 
 enum opcodes 
 {
