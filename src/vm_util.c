@@ -58,7 +58,7 @@ char *read_string_value(vm_t *instance)
     assert(instance);
 
     len = strlen(&instance->code[instance->ip]);
-    string = malloc(sizeof(char) * len);
+    string = malloc(sizeof(char) * (len + 1));
     if (NULL == string)
     {
         return NULL;

@@ -1,7 +1,8 @@
-const 3
+const 4
 sconst "hello"
 iconst 1234
 sconst " world"
+sconst "meow"
 
 @ main:
 @ ilocal 12
