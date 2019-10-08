@@ -86,7 +86,28 @@ void vm_free(vm_t *instance)
     instance = NULL;
 }
 
-int vm_run(vm_t *instance);
+int vm_run(vm_t *instance)
+{
+    int cur_opcode = 0;
+    int res = 0;
+
+    assert(instance);
+
+    if (VM_READY != instance->state)
+    {
+        instance->error_handler("vm is not at ready state");
+    }
+
+    instance->state = VM_RUNNING;
+
+    while (VM_RUNNING == instance->state)
+    {
+        cur_opcode = read_opcode(instance);
+        res = instance->opcode_handlers[cur_opcode](instance);
+    }
+
+    return 0;
+}
 
 
 /* STATIC FUNCTIONS */
@@ -166,6 +187,8 @@ static int init_vm_fields(vm_t *instance, err_handler handler)
     {
         return -1;
     }
+
+    init_opcode_handlers(instance->opcode_handlers);
 
     return 0;
 }

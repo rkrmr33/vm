@@ -1,44 +1,56 @@
+#include <assert.h> /* assert */
+#include <stdio.h> /* TODO: remove */
+
+#include "vm_impl.h" /* to access vm fields  */
+#include "vm_util.h" /* vm utility functions */
+
 #include "opcodes.h"
 
 /* special operations */
-void opcode_noop(vm_t *instance);
-void opcode_const(vm_t *instance);
-void opcode_local(vm_t *instance);
+int opcode_unknown(vm_t *instance);
+int opcode_noop(vm_t *instance);
+int opcode_const(vm_t *instance);
+int opcode_local(vm_t *instance);
+int opcode_halt(vm_t *instance);
+int opcode_stop(vm_t *instance);
 
 /* integer operations */
-void opcode_iload(vm_t *instance);
-void opcode_istore(vm_t *instance);
-void opcode_iadd(vm_t *instance);
-void opcode_isub(vm_t *instance);
-void opcode_imult(vm_t *instance);
-void opcode_idiv(vm_t *instance);
-void opcode_ineg(vm_t *instance);
-void opcode_iprint(vm_t *instance);
-void opcode_ilocal(vm_t *instance);
+int opcode_iload(vm_t *instance);
+int opcode_istore(vm_t *instance);
+int opcode_iadd(vm_t *instance);
+int opcode_isub(vm_t *instance);
+int opcode_imult(vm_t *instance);
+int opcode_idiv(vm_t *instance);
+int opcode_ineg(vm_t *instance);
+int opcode_iprint(vm_t *instance);
+int opcode_ilocal(vm_t *instance);
 
 /* string operations */
-void opcode_sload(vm_t *instance);
-void opcode_sstore(vm_t *instance);
-void opcode_sprint(vm_t *instance);
-void opcode_slocal(vm_t *instance);
+int opcode_sload(vm_t *instance);
+int opcode_sstore(vm_t *instance);
+int opcode_sprint(vm_t *instance);
+int opcode_slocal(vm_t *instance);
 
 /* constant pool operatios */
-void opcode_icload(vm_t *instance);
-void opcode_iconst(vm_t *instance);
-void opcode_scload(vm_t *instance);
-void opcode_sconst(vm_t *instance);
+int opcode_icload(vm_t *instance);
+int opcode_iconst(vm_t *instance);
+int opcode_scload(vm_t *instance);
+int opcode_sconst(vm_t *instance);
 
 
-void opcodes_init(opcode_handler handlers[]) 
+void init_opcode_handlers(opcode_handler handlers[]) 
 {
     for (int i = 0; i < NUM_OPCODES; ++i)
     {
-        handlers[i] = opcode_noop;
+        handlers[i] = opcode_unknown;
     }
 
     /* special operations */
+    handlers[OP_NOOP] = opcode_noop;
     handlers[OP_CONST] = opcode_const;
     handlers[OP_LOCAL] = opcode_local;
+    handlers[OP_HALT] = opcode_halt;
+    handlers[OP_STOP] = opcode_stop;
 
     /* integer operations */
     handlers[OP_ILOAD] = opcode_iload;
@@ -65,91 +77,156 @@ void opcodes_init(opcode_handler handlers[])
 }
 
 /* special operations */
-void opcode_noop(vm_t *instance) 
+int opcode_unknown(vm_t *instance)
 {
-
+    return -1;
 }
 
-void opcode_const(vm_t *instance) 
+int opcode_noop(vm_t *instance) 
 {
+    assert(instance);
 
+    return 0;
 }
 
-void opcode_local(vm_t *instance) 
+int opcode_const(vm_t *instance) 
 {
+    assert(instance);
+    // this should not be executed by the vm at run-time
+    // this should only be executed at load-time...
 
+    return -1;
+}
+
+int opcode_local(vm_t *instance) 
+{
+    int local_var_arr_size = 0;
+    
+    assert(instance);
+
+    local_var_arr_size = read_int_value(instance);
+
+    printf("local var arr size %d\n", local_var_arr_size);
+
+    return 0;
+}
+
+int opcode_halt(vm_t *instance)
+{
+    // TODO: support HALT opcode
+
+    return 0;
+}
+
+int opcode_stop(vm_t *instance)
+{
+    assert(instance);
+
+    instance->state = VM_FINISHED;
+
+    return 0;
 }
 
 /* integer operations */
-void opcode_iload(vm_t *instance) 
+int opcode_iload(vm_t *instance) 
 {
-
+    return 0;
 }
-void opcode_istore(vm_t *instance) 
+int opcode_istore(vm_t *instance) 
 {
-
+    // TODO: support ISTORE
+    return 0;
 }
-void opcode_iadd(vm_t *instance) 
+int opcode_iadd(vm_t *instance) 
 {
 
+    return 0;
 }
-void opcode_isub(vm_t *instance) 
+int opcode_isub(vm_t *instance) 
 {
 
+    return 0;
 }
-void opcode_imult(vm_t *instance) 
+int opcode_imult(vm_t *instance) 
 {
 
+    return 0;
 }
-void opcode_idiv(vm_t *instance) 
+int opcode_idiv(vm_t *instance) 
 {
 
+    return 0;
 }
-void opcode_ineg(vm_t *instance) 
+int opcode_ineg(vm_t *instance) 
 {
 
+    return 0;
 }
-void opcode_iprint(vm_t *instance) 
+int opcode_iprint(vm_t *instance) 
 {
 
+    return 0;
 }
-void opcode_ilocal(vm_t *instance) 
+int opcode_ilocal(vm_t *instance) 
 {
+    vm_value_t local_int = {0};
+    
+    assert(instance);
 
+    local_int.type = INTEGER_TYPE;
+    local_int.value.integer_value = read_int_value(instance);
+
+    return 0;
 }
 
 /* string operations */
-void opcode_sload(vm_t *instance) 
+int opcode_sload(vm_t *instance) 
 {
-
+    return 0;
 }
-void opcode_sstore(vm_t *instance) 
+int opcode_sstore(vm_t *instance) 
 {
 
+    return 0;
 }
-void opcode_sprint(vm_t *instance) 
+int opcode_sprint(vm_t *instance) 
 {
 
+    return 0;
 }
-void opcode_slocal(vm_t *instance) 
+int opcode_slocal(vm_t *instance) 
 {
+    vm_value_t local_string = {0};
+    int cpool_index = 0;
+    
+    assert(instance);
 
+    local_string.type = STRING_TYPE;
+    cpool_index = read_int_value(instance);
+    // TODO: check type of value in constant pool
+    local_string.value.string_value = instance->constant_pool[cpool_index].value.string_value;
+
+    return 0;
 }
 
 /* constant pool operatios */
-void opcode_icload(vm_t *instance) 
+int opcode_icload(vm_t *instance) 
 {
 
+    return 0;
 }
-void opcode_iconst(vm_t *instance) 
+int opcode_iconst(vm_t *instance) 
 {
 
+    return 0;
 }
-void opcode_scload(vm_t *instance) 
+int opcode_scload(vm_t *instance) 
 {
 
+    return 0;
 }
-void opcode_sconst(vm_t *instance) 
+int opcode_sconst(vm_t *instance) 
 {
 
+    return 0;
 }

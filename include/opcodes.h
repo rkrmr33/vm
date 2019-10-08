@@ -5,9 +5,9 @@
 
 #define NUM_OPCODES 255
 
-typedef void (*opcode_handler)(vm_t *instance);
+typedef int (*opcode_handler)(vm_t *instance);
 
-void opcodes_init(opcode_handler handlers[]);
+void init_opcode_handlers(opcode_handler handlers[]);
 
 enum opcodes 
 {
@@ -17,6 +17,8 @@ enum opcodes
     OP_NOOP   = 0x00, // no operation
     OP_CONST  = 0x01, // declares following constant pool size
     OP_LOCAL  = 0x02, // declares following local variables array size
+    OP_HALT   = 0x03, // halts the machine for a variable amount of seconds
+    OP_STOP   = 0x04, // stops the machine changing its state to FINISHED
 
     /*
     * Integer operations

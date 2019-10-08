@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "opcodes.h": "c"
+        "opcodes.h": "c",
+        "vm_util.h": "c"
     }
 }

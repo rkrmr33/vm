@@ -38,7 +38,7 @@ struct vm
     vm_value_t *constant_pool; // a segment of code that contains constants
     unsigned int constant_pool_size;
 
-    opcode_handler *opcode_handlers[NUM_OPCODES]; // a lookup table for all the op-code handlers
+    opcode_handler opcode_handlers[NUM_OPCODES]; // a lookup table for all the op-code handlers
 
     char *code; // a pointer to the bytecode instructions
     unsigned int code_size;

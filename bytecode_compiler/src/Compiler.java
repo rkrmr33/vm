@@ -60,6 +60,10 @@ public class Compiler {
 
         opcodes.put("local", new Opcode(0x02, (scn, code) -> writeSingleIntOpcode(scn, code)));
 
+        opcodes.put("halt", new Opcode(0x03, (scn, code) -> writeSingleIntOpcode(scn, code)));
+
+        opcodes.put("stop", new Opcode(0x04, (scn, code) -> writeNoArgOpcode(code)));
+
         opcodes.put("iconst", new Opcode(0x51, (scn, code) -> writeSingleIntOpcode(scn, code)));
 
         opcodes.put("sconst", new Opcode(0x53, (scn, code) -> {
@@ -70,16 +74,10 @@ public class Compiler {
             output.write(new String(cStr).getBytes());
         }));
 
-        // opcodes.put("iload",  0x10);
-        // opcodes.put("istore", 0x11);
-        // opcodes.put("iadd",   0x12);
-        // opcodes.put("isub",   0x13);
-        // opcodes.put("imult",  0x14);
-        // opcodes.put("idiv",   0x15);
-        // opcodes.put("ineg",   0x16);
-        // opcodes.put("iprint", 0x17);
+        opcodes.put("ilocal", new Opcode(0x18, (scn, code) -> writeSingleIntOpcode(scn, code)));
 
-        // opcodes.put("cload",  0x20);
+        opcodes.put("slocal", new Opcode(0x34, (scn, code) -> writeSingleIntOpcode(scn, code)));
+
     }
 
     public void initTypes() {
