@@ -45,6 +45,20 @@ void print_vm_value(vm_value_t *vm_value)
     }
 }
 
+void print_error(vm_t *instance, const char *message)
+{
+    assert(instance && instance->err);
+
+    fprintf(instance->err, "[-] %s\n", message);
+}
+
+void print_output(vm_t *instance, const char *message)
+{
+    assert(instance && instance->output);
+
+    fprintf(instance->output, "%s", message);
+}
+
 int read_int_value(vm_t *instance)
 {
     int val = 0;
@@ -83,6 +97,20 @@ char read_opcode(vm_t *instance)
     return instance->code[instance->ip++];
 }
 
+vm_value_t *get_local_var(vm_t *instance, int index)
+{
+    assert(instance);
+
+    return ((vm_value_t *)&instance->stack[instance->sp] - 1 - index);
+}
+
+vm_value_t *get_constant_var(vm_t *instance, int index)
+{
+    assert(instance);
+
+    return &instance->constant_pool[index];
+}
+
 int load_bytecode_from_file(const char *file_path, vm_t *instance)
 {
     int res = 0, fd = 0;
@@ -95,8 +123,8 @@ int load_bytecode_from_file(const char *file_path, vm_t *instance)
     fd = open(file_path, FILE_PERM);
     if (-1 == fd)
     {
-        instance->error_handler("error: could not open file:");
-        instance->error_handler(file_path);
+        print_error(instance, "error: could not open file:");
+        print_error(instance, file_path);
 
         return -1;
     }
@@ -104,8 +132,8 @@ int load_bytecode_from_file(const char *file_path, vm_t *instance)
     res = fstat(fd, &file_stat);
     if (0 != res)
     {
-        instance->error_handler("error: could not read file:");
-        instance->error_handler(file_path);
+        print_error(instance, "error: could not read file:");
+        print_error(instance, file_path);
 
         return -1;
     }
@@ -115,8 +143,8 @@ int load_bytecode_from_file(const char *file_path, vm_t *instance)
     instance->code = (char *)mmap(NULL, file_size, MAP_PERM, MAP_PRIVATE, fd, 0);
     if (MAP_FAILED == instance->code)
     {
-        instance->error_handler("error: could not map file:");
-        instance->error_handler(file_path);
+        print_error(instance, "error: could not map file:");
+        print_error(instance, file_path);
 
         return -1;
     }
@@ -171,7 +199,7 @@ void free_code(vm_t *instance)
         res = munmap(instance->code, instance->code_size);
         if (0 != res)
         {
-            instance->error_handler("error: could not unmap file");
+            print_error(instance, "error: could not unmap file");
         }
     }
 

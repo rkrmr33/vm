@@ -14,14 +14,24 @@
 #define DEFAULT_HEAP_SIZE 1000000 // 1mb
 #define DEFAULT_STACK_SIZE 100000 // 100kb 
 
-static void default_err_handler(const char *message);
-static int init_vm_fields(vm_t *instance, err_handler handler);
+#define DEFAULT_OUTPUT stdout
+#define DEFAULT_INPUT stdin
+#define DEFAULT_ERR stderr
+
+static int init_vm_fields(vm_t *instance, 
+                          unsigned int stack_size,
+                          size_t heap_size,
+                          FILE *input, 
+                          FILE *output, 
+                          FILE *err);
 static int build_constant_pool(vm_t *instance);
 
 vm_t *vm_create(const char *file_path,
                 unsigned int stack_size,
                 size_t heap_size,
-                err_handler handler)
+                FILE *output,
+                FILE *input,
+                FILE *err)
 {
     int res = 0;
     vm_t *new_instance = NULL;
@@ -34,7 +44,7 @@ vm_t *vm_create(const char *file_path,
         return NULL;
     }
 
-    res = init_vm_fields(new_instance, handler);
+    res = init_vm_fields(new_instance, stack_size, heap_size, output, input, err);
     if (0 != res)
     {
         vm_free(new_instance);
@@ -53,8 +63,8 @@ vm_t *vm_create(const char *file_path,
     res = validate_magic_number(new_instance);
     if (0 != res)
     {
-        new_instance->error_handler("file with wrong magic number!");
-        new_instance->error_handler(file_path);
+        print_error(new_instance, "file with wrong magic number!");
+        print_error(new_instance, file_path);
         vm_free(new_instance);
 
         return NULL;
@@ -95,7 +105,7 @@ int vm_run(vm_t *instance)
 
     if (VM_READY != instance->state)
     {
-        instance->error_handler("vm is not at ready state");
+        print_error(instance, "vm is not at ready state");
     }
 
     instance->state = VM_RUNNING;
@@ -126,7 +136,6 @@ static int build_constant_pool(vm_t *instance)
     }
 
     instance->constant_pool_size = read_int_value(instance);
-    printf("[+] constant_pool_size: %u\n", instance->constant_pool_size);
 
     instance->constant_pool = (vm_value_t *)malloc(instance->constant_pool_size * sizeof(vm_value_t));
     if (NULL == instance->constant_pool)
@@ -154,17 +163,20 @@ static int build_constant_pool(vm_t *instance)
                 cur_value->value.integer_value = read_int_value(instance);
                 break;
             default:
-                instance->error_handler("constant_pool_load: unknown type");
+                print_error(instance, "constant_pool_load: unknown type");
                 return -1;
         }
-
-        print_vm_value(cur_value);
     }
     
     return 0;
 }
 
-static int init_vm_fields(vm_t *instance, err_handler handler)
+static int init_vm_fields(vm_t *instance, 
+                          unsigned int stack_size,
+                          size_t heap_size,
+                          FILE *input, 
+                          FILE *output, 
+                          FILE *err)
 {
     assert(instance);
 
@@ -172,9 +184,8 @@ static int init_vm_fields(vm_t *instance, err_handler handler)
 
     instance->state = VM_INIT;
     instance->magic_num = MAGIC_NUM;
-    instance->heap_size = DEFAULT_HEAP_SIZE;
-    instance->stack_size = DEFAULT_STACK_SIZE;
-    instance->error_handler = (NULL == handler ? DEFAULT_ERR_HANDLER : handler);
+    instance->heap_size = (0 == heap_size ? DEFAULT_HEAP_SIZE : heap_size);
+    instance->stack_size = (0 == stack_size ? DEFAULT_STACK_SIZE : stack_size);
 
     instance->heap = malloc(sizeof(char) * instance->heap_size);
     if (NULL == instance->heap)
@@ -189,16 +200,13 @@ static int init_vm_fields(vm_t *instance, err_handler handler)
     }
 
     instance->local_vars_arr = (vm_value_t *)instance->stack;
-    instance->operands_stack = (vm_value_t *)instance->stack;
+    instance->operands_stack = (vm_value_t *)instance->stack + 1;
     init_opcode_handlers(instance->opcode_handlers);
 
+    instance->output = (NULL == output ? DEFAULT_OUTPUT : output);
+    instance->input = (NULL == input ? DEFAULT_INPUT : input);
+    instance->err = (NULL == err ? DEFAULT_ERR : err);
+
     return 0;
-}
-
-static void default_err_handler(const char *message)
-{
-    assert(message);
-
-    printf("[-] %s\n", message);
 }
 

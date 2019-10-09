@@ -19,7 +19,9 @@ enum vm_state
 vm_t *vm_create(const char *file_path,
                 unsigned int stack_size,
                 size_t heap_size,
-                err_handler handler);
+                FILE *output,
+                FILE *input,
+                FILE *err);
 
 void vm_free(vm_t *instance);
 

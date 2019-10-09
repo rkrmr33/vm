@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
     }
     else 
     {
-        vm_t *new_vm = vm_create(argv[1], 0, 0, NULL);
+        vm_t *new_vm = vm_create(argv[1], 0, 0, stdin, stdout, stderr);
         if (NULL != new_vm)
         {
             vm_run(new_vm);

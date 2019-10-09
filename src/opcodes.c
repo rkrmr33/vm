@@ -113,19 +113,19 @@ int opcode_local(vm_t *instance)
 
     old_op_stk_size = ((char *)instance->operands_stack - (char *)old_sp - sizeof(vm_value_t));
 
-    // move stack pointer to a new location
-    instance->sp += old_op_stk_size + sizeof(vm_value_t) * local_var_arr_size;
+    // make place for local var array
+    instance->sp += old_op_stk_size + sizeof(vm_value_t) * (local_var_arr_size + 1);
 
-    // place start of local var array at the top of the old op stk
-    instance->local_vars_arr = instance->operands_stack;
+    // place start of local var array at the bottom of the new base pointer
+    // local vars array grows downwards
+    instance->local_vars_arr = (vm_value_t *)&instance->stack[instance->sp] - 1;
 
     // place new op stk head above the new sp
     instance->operands_stack = (vm_value_t *)(&instance->stack[instance->sp]) + 1;
 
-    instance->
-
-    // TODO: remove
-    printf("allocated space for %d locals\n", local_var_arr_size);
+    // save pointer to previous stack frame
+    ((vm_value_t *)&instance->stack[instance->sp])->type = REFERENCE_TYPE;
+    ((vm_value_t *)&instance->stack[instance->sp])->value.reference_value = old_sp;
 
     return 0;
 }
@@ -149,6 +149,21 @@ int opcode_stop(vm_t *instance)
 /* integer operations */
 int opcode_iload(vm_t *instance) 
 {
+    int local_var_index = 0;
+    vm_value_t *local_var = NULL;
+
+    assert(instance);
+
+    local_var_index = read_int_value(instance);
+    local_var = get_local_var(instance, local_var_index);
+
+    // TODO: add check on the type of local variable
+    // TODO: add check for stack overflow
+
+    instance->operands_stack->type = INTEGER_TYPE;
+    instance->operands_stack->value.integer_value = local_var->value.integer_value;
+    ++instance->operands_stack;
+
     return 0;
 }
 int opcode_istore(vm_t *instance) 
@@ -158,42 +173,107 @@ int opcode_istore(vm_t *instance)
 }
 int opcode_iadd(vm_t *instance) 
 {
+    vm_value_t *op1 = NULL, *op2 = NULL;
+    int res = 0;
+
+    assert(instance);
+
+    // TODO: add type check
+    // TODO: add stack overflow check
+
+    op1 = &instance->operands_stack[-2];
+    op2 = &instance->operands_stack[-1];
+    res = op1->value.integer_value + op2->value.integer_value;
+
+    instance->operands_stack[-2].value.integer_value = res;
+    --instance->operands_stack;
 
     return 0;
 }
 int opcode_isub(vm_t *instance) 
 {
+    vm_value_t *op1 = NULL, *op2 = NULL;
+    int res = 0;
+
+    assert(instance);
+
+    // TODO: add type check
+    // TODO: add stack overflow check
+
+    op1 = &instance->operands_stack[-2];
+    op2 = &instance->operands_stack[-1];
+    res = op1->value.integer_value - op2->value.integer_value;
+
+    instance->operands_stack[-2].value.integer_value = res;
+    --instance->operands_stack;
 
     return 0;
 }
 int opcode_imult(vm_t *instance) 
 {
+    vm_value_t *op1 = NULL, *op2 = NULL;
+    int res = 0;
+
+    assert(instance);
+
+    // TODO: add type check
+    // TODO: add stack overflow check
+
+    op1 = &instance->operands_stack[-2];
+    op2 = &instance->operands_stack[-1];
+    res = op1->value.integer_value * op2->value.integer_value;
+
+    instance->operands_stack[-2].value.integer_value = res;
+    --instance->operands_stack;
 
     return 0;
 }
 int opcode_idiv(vm_t *instance) 
 {
+vm_value_t *op1 = NULL, *op2 = NULL;
+    int res = 0;
+
+    assert(instance);
+
+    // TODO: add type check
+    // TODO: check division by zero
+    // TODO: add stack overflow check
+
+    op1 = &instance->operands_stack[-2];
+    op2 = &instance->operands_stack[-1];
+    res = op1->value.integer_value / op2->value.integer_value;
+
+    instance->operands_stack[-2].value.integer_value = res;
+    --instance->operands_stack;
 
     return 0;
 }
 int opcode_ineg(vm_t *instance) 
 {
+    assert(instance);
+
+    // TODO: add type check
+
+    instance->operands_stack[-1].value.integer_value *= -1;
 
     return 0;
 }
 int opcode_iprint(vm_t *instance) 
 {
+    assert(instance);
+    // TODO: add type check
 
+    fprintf(instance->output, "%d\n", instance->operands_stack[-1].value.integer_value);
+    
     return 0;
 }
 int opcode_ilocal(vm_t *instance) 
 {
-    vm_value_t local_int = {0};
-    
     assert(instance);
 
-    local_int.type = INTEGER_TYPE;
-    local_int.value.integer_value = read_int_value(instance);
+    instance->local_vars_arr->type = INTEGER_TYPE;
+    instance->local_vars_arr->value.integer_value = read_int_value(instance);
+    --instance->local_vars_arr;
 
     return 0;
 }
@@ -201,6 +281,21 @@ int opcode_ilocal(vm_t *instance)
 /* string operations */
 int opcode_sload(vm_t *instance) 
 {
+    int local_var_index = 0;
+    vm_value_t *local_var = NULL;
+
+    assert(instance);
+
+    local_var_index = read_int_value(instance);
+    local_var = get_local_var(instance, local_var_index);
+
+    // TODO: add check on the type of local variable
+    // TODO: add check for stack overflow
+
+    instance->operands_stack->type = STRING_TYPE;
+    instance->operands_stack->value.string_value = local_var->value.string_value;
+    ++instance->operands_stack;
+
     return 0;
 }
 int opcode_sstore(vm_t *instance) 
@@ -215,15 +310,15 @@ int opcode_sprint(vm_t *instance)
 }
 int opcode_slocal(vm_t *instance) 
 {
-    vm_value_t local_string = {0};
     int cpool_index = 0;
     
     assert(instance);
 
-    local_string.type = STRING_TYPE;
+    instance->local_vars_arr->type = STRING_TYPE;
     cpool_index = read_int_value(instance);
     // TODO: check type of value in constant pool
-    local_string.value.string_value = instance->constant_pool[cpool_index].value.string_value;
+    instance->local_vars_arr->value.string_value = instance->constant_pool[cpool_index].value.string_value;
+    --instance->local_vars_arr;
 
     return 0;
 }
@@ -231,6 +326,20 @@ int opcode_slocal(vm_t *instance)
 /* constant pool operatios */
 int opcode_icload(vm_t *instance) 
 {
+    int constant_var_index = 0;
+    vm_value_t *constant_var = NULL;
+
+    assert(instance);
+
+    constant_var_index = read_int_value(instance);
+    constant_var = get_constant_var(instance, constant_var_index);
+
+    // TODO: add check on the type of local variable
+    // TODO: add check for stack overflow
+
+    instance->operands_stack->type = INTEGER_TYPE;
+    instance->operands_stack->value.integer_value = constant_var->value.integer_value;
+    ++instance->operands_stack;
 
     return 0;
 }

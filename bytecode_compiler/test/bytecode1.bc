@@ -8,13 +8,13 @@ sconst "Hello roi, I am the VM"
 local 3
 ilocal 12
 ilocal 5
-slocal 2
+slocal 4
 @ 
-@ iload 0
-@ iload 1
-@ iadd
-@ iprint @should be 17
-@ icload 0
-@ iadd
-@ iprint @should be 1251
+iload 0
+iload 1
+iadd
+iprint @ should be 17
+icload 1
+iadd
+iprint @ should be 1251
 stop

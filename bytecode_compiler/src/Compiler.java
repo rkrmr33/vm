@@ -52,20 +52,34 @@ public class Compiler {
     }
 
     public void initOpcodes() {
+        /* special operations */
         opcodes.put("@", new Opcode(0xFF, (scn, code) -> skip(scn)));
-        
         opcodes.put("noop", new Opcode(0x00, (scn, code) -> writeNoArgOpcode(code)));
-        
         opcodes.put("const", new Opcode(0x01, (scn, code) -> writeSingleIntOpcode(scn, code)));
-
         opcodes.put("local", new Opcode(0x02, (scn, code) -> writeSingleIntOpcode(scn, code)));
-
         opcodes.put("halt", new Opcode(0x03, (scn, code) -> writeSingleIntOpcode(scn, code)));
-
         opcodes.put("stop", new Opcode(0x04, (scn, code) -> writeNoArgOpcode(code)));
 
+        
+        /* integer operations */
+        opcodes.put("iload", new Opcode(0x10, (scn, code) -> writeSingleIntOpcode(scn, code)));
+        opcodes.put("istore", new Opcode(0x11, (scn, code) -> writeSingleIntOpcode(scn, code)));
+        opcodes.put("iadd", new Opcode(0x12, (scn, code) -> writeNoArgOpcode(code)));
+        opcodes.put("isub", new Opcode(0x13, (scn, code) -> writeNoArgOpcode(code)));
+        opcodes.put("imult", new Opcode(0x14, (scn, code) -> writeNoArgOpcode(code)));
+        opcodes.put("idiv", new Opcode(0x15, (scn, code) -> writeNoArgOpcode(code)));
+        opcodes.put("ineg", new Opcode(0x16, (scn, code) -> writeNoArgOpcode(code)));
+        opcodes.put("iprint", new Opcode(0x17, (scn, code) -> writeNoArgOpcode(code)));
+        opcodes.put("ilocal", new Opcode(0x18, (scn, code) -> writeSingleIntOpcode(scn, code)));
+        
+        /* string operations */
+        opcodes.put("sload", new Opcode(0x30, (scn, code) -> writeSingleIntOpcode(scn, code)));
+        opcodes.put("slocal", new Opcode(0x34, (scn, code) -> writeSingleIntOpcode(scn, code)));
+        
+        
+        /* constant pool operations */
         opcodes.put("iconst", new Opcode(0x51, (scn, code) -> writeSingleIntOpcode(scn, code)));
-
+        opcodes.put("icload", new Opcode(0x50, (scn, code) -> writeSingleIntOpcode(scn, code)));
         opcodes.put("sconst", new Opcode(0x53, (scn, code) -> {
             output.write((byte)code);
             String str = scn.nextLine().trim();
@@ -73,11 +87,6 @@ public class Compiler {
             cStr[cStr.length - 1] = (char)0x0;
             output.write(new String(cStr).getBytes());
         }));
-
-        opcodes.put("ilocal", new Opcode(0x18, (scn, code) -> writeSingleIntOpcode(scn, code)));
-
-        opcodes.put("slocal", new Opcode(0x34, (scn, code) -> writeSingleIntOpcode(scn, code)));
-
     }
 
     public void initTypes() {

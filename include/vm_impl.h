@@ -39,6 +39,7 @@ struct vm
     unsigned int constant_pool_size;
 
     vm_value_t *local_vars_arr; // a pointer to the local variables array
+    
     vm_value_t *operands_stack; // a pointer to the head of the operand stack
 
     opcode_handler opcode_handlers[NUM_OPCODES]; // a lookup table for all the op-code handlers
@@ -46,7 +47,9 @@ struct vm
     char *code; // a pointer to the bytecode instructions
     unsigned int code_size;
 
-    err_handler error_handler; // error handler
+    FILE *input; // the input file pointer
+    FILE *output; // the output file pointer
+    FILE *err;   // the error file pointer
 
     enum vm_state state; // the current state of the machine
 };
