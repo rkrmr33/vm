@@ -11,20 +11,28 @@ COMPILER_CLASSES = $(patsubst $(COMPILER_FOLDER)/src/%.java, $(COMPILER_FOLDER)/
 $(LIB): $(OBJS)
 	gcc -shared -o $@ $^
 
+.PHONY: run
+run: build_test compiler
+	@echo "[Compiling...]"
+	@java -jar bytecode_compiler/BytecodeCompiler.jar bytecode_compiler/test/bytecode1.bc bytecode_compiler/test/bytecode1.bcc
+	@echo "[Running...]"
+	@bin/vm_test bytecode_compiler/test/bytecode1.bcc
+
 .PHONY: build_test
-build_test: $(TESTS) 
+build_test: $(TESTS)
+	@export LD_LIBRARY_PATH=$(pwd)/lib
 
 .PHONY: compiler
 compiler: $(COMPILER_FOLDER)/$(COMPILER)
 	
 bin/%: test/%.c $(LIB)
-	gcc -o $@ $< -Iinclude/ -Llib/ -l$(LIB_NAME)
+	@gcc -o $@ $< -Iinclude/ -Llib/ -l$(LIB_NAME)
 
 obj/%.o: src/%.c
-	gcc -fPIC -c -o $@ $< -I include/
+	@gcc -fPIC -c -o $@ $< -I include/
 
 $(COMPILER_FOLDER)/$(COMPILER): $(COMPILER_CLASS_FILES)
-	@echo "Building compiler..."
+	@echo "[Building compiler...]"
 	@echo "Main-Class: BytecodeCompiler" > $(COMPILER_FOLDER)/manifest.txt
 	@echo "Class-Path: class/" >> $(COMPILER_FOLDER)/manifest.txt
 	@jar -cvfm $(COMPILER_FOLDER)/$(COMPILER) $(COMPILER_FOLDER)/manifest.txt $(COMPILER_FOLDER)/class/*.class 1>/dev/null
@@ -34,5 +42,5 @@ $(COMPILER_FOLDER)/class/%.class: $(COMPILER_FOLDER)/src/%.java
 
 .PHONY: clean
 clean:
-	@echo "cleaning..."
+	@echo "[Cleaning...]"
 	@rm $(OBJS) $(LIB) $(TESTS) $(COMPILER_FOLDER)/$(COMPILER) $(COMPILER_CLASS_FILES) $(COMPILER_FOLDER)/manifest.txt 2>/dev/null || true

@@ -45,7 +45,6 @@ public class Compiler {
             }
         }
 
-        System.out.println("Compilation finished!");
         output.flush();
         output.close();
         scn.close();
