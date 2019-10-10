@@ -30,10 +30,10 @@ public class Compiler {
         scn = new Scanner(new FileReader(inputFilename));
         output.write(getIntBytes(MAGIC_NUMBER)); // write magic number
 
-        while (scn.hasNextLine()) {
+        while (scn.hasNext()) {
             String opcodeName = scn.next();
             Opcode curOpcode = opcodes.get(opcodeName);
-
+            
             if (null == curOpcode) {
                 throw new IllegalOpcodeException("unknown opcode: " + opcodeName);
             } else {
@@ -75,7 +75,7 @@ public class Compiler {
         /* string operations */
         opcodes.put("sload", new Opcode(0x30, (scn, code) -> writeSingleIntOpcode(scn, code)));
         opcodes.put("slocal", new Opcode(0x34, (scn, code) -> writeSingleIntOpcode(scn, code)));
-        
+        opcodes.put("sprint", new Opcode(0x33, (scn, code) -> writeNoArgOpcode(code)));
         
         /* constant pool operations */
         opcodes.put("iconst", new Opcode(0x51, (scn, code) -> writeSingleIntOpcode(scn, code)));
@@ -87,6 +87,7 @@ public class Compiler {
             cStr[cStr.length - 1] = (char)0x0;
             output.write(new String(cStr).getBytes());
         }));
+        opcodes.put("scload", new Opcode(0x52, (scn, code) -> writeSingleIntOpcode(scn, code)));
     }
 
     public void initTypes() {

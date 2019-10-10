@@ -305,7 +305,11 @@ int opcode_sstore(vm_t *instance)
 }
 int opcode_sprint(vm_t *instance) 
 {
+	assert(instance);
+    // TODO: add type check
 
+    fprintf(instance->output, "%s\n", instance->operands_stack[-1].value.string_value);
+    
     return 0;
 }
 int opcode_slocal(vm_t *instance) 
@@ -350,7 +354,21 @@ int opcode_iconst(vm_t *instance)
 }
 int opcode_scload(vm_t *instance) 
 {
+    int constant_var_index = 0;
+    vm_value_t *constant_var = NULL;
 
+    assert(instance);
+
+    constant_var_index = read_int_value(instance);
+    constant_var = get_constant_var(instance, constant_var_index);
+
+    // TODO: add check on the type of local variable
+    // TODO: add check for stack overflow
+
+    instance->operands_stack->type = STRING_TYPE;
+    instance->operands_stack->value.string_value = constant_var->value.string_value;
+    ++instance->operands_stack;
+    
     return 0;
 }
 int opcode_sconst(vm_t *instance) 

@@ -9,7 +9,7 @@ local 3
 ilocal 12
 ilocal 5
 slocal 4
-@ 
+
 iload 0
 iload 1
 iadd
@@ -17,4 +17,6 @@ iprint @ should be 17
 icload 1
 iadd
 iprint @ should be 1251
+scload 4
+sprint @ should print "hello"
 stop
