@@ -1,0 +1,12 @@
+const 7
+S "hello"
+I 1234
+S " world"
+S "meow"
+S "Hello roi, I am the VM"
+M "main" I 3IIS 0
+M "foo" I 1I 1I
+
+main:
+    @
+

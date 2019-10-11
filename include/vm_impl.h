@@ -23,6 +23,22 @@ typedef struct vm_value
     } value;
 } vm_value_t;
 
+typedef struct vm_method_meta 
+{
+    int num_param;
+    enum vm_types *param_types;
+    int num_locals;
+    enum vm_types *local_types;
+    enum vm_types return_type;
+    char *name;
+} vm_method_meta_t;
+
+typedef struct vm_stack_trace_node 
+{
+    vm_method_meta_t *current_method_meta;
+    struct vm_stack_trace_node *prev;
+} vm_stack_trace_node_t;
+
 struct vm
 {
     unsigned int magic_num; // magic number
@@ -31,6 +47,8 @@ struct vm
 
     char *stack; // call stack
     unsigned int stack_size;
+
+    vm_stack_trace_node_t *stack_trace; // a pointer to a linked-list of method data
 
     char *heap; // contains all objects and arrays
     size_t heap_size;

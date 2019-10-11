@@ -18,6 +18,11 @@ run: build_test compiler
 	@echo "[Running...]"
 	@bin/vm_test bytecode_compiler/test/bytecode1.bcc
 
+.PHONY: compile
+compile: compiler
+	@echo "[Compiling...]"
+	@java -jar bytecode_compiler/BytecodeCompiler.jar bytecode_compiler/test/bytecode1.bc bytecode_compiler/test/bytecode1.bcc
+
 .PHONY: build_test
 build_test: $(TESTS)
 	@export LD_LIBRARY_PATH=$(pwd)/lib
