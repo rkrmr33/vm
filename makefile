@@ -21,7 +21,7 @@ run: build_test compiler
 .PHONY: compile
 compile: compiler
 	@echo "[Compiling...]"
-	@java -jar bytecode_compiler/BytecodeCompiler.jar bytecode_compiler/test/bytecode1.bc bytecode_compiler/test/bytecode1.bcc
+	@java -jar bytecode_compiler/BytecodeCompiler.jar bytecode_compiler/test/bytecode2.bc bytecode_compiler/test/bytecode2.bcc
 
 .PHONY: build_test
 build_test: $(TESTS)

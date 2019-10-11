@@ -10,3 +10,4 @@ M "foo" I 1I 1I
 main:
     @
 
+foo:
