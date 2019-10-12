@@ -6,6 +6,8 @@
 #include <stdlib.h>    /* free      */
 #include <string.h>    /* strlen    */
 
+#include "vm_impl.h"   /* vm_method_meta_t */
+
 #include "vm_util.h"
 
 #define FILE_PERM O_RDONLY
@@ -13,14 +15,23 @@
 
 int validate_magic_number(vm_t *instance)
 {
-    int *reader = NULL;
-
     assert(instance && instance->code);
 
-    reader = &((int *)instance->code)[instance->ip];
-    instance->ip += sizeof(int);
+    return (instance->magic_num != read_int_value(instance));
+}
 
-    return instance->magic_num != *reader;
+int check_main_method(vm_t *instance, 
+                      const char *main_method_name, 
+                      vm_method_meta_t *method_meta)
+{
+    assert(instance && main_method_name && method_meta);
+
+    if (0 == strcmp(main_method_name, method_meta->name))
+    {
+        return open_stack_frame(instance, method_meta);
+    }
+
+    return 0;
 }
 
 void print_vm_value(vm_value_t *vm_value)
@@ -94,22 +105,47 @@ int read_byte_value(vm_t *instance)
 
 int read_int_value(vm_t *instance)
 {
-    int val = 0;
+    int *reader = NULL;
     
     assert(instance);
 
-    val = *(int *)&instance->code[instance->ip];
+    reader = &((int *)instance->code)[instance->ip];
     instance->ip += sizeof(int);
 
-    return val;
+    return *reader;
 }
 
-char read_opcode(vm_t *instance)
+vm_instruction_t *read_next_instruction(vm_t *instance)
 {
+    vm_instruction_t *instruction = NULL;
+
+    assert(instance && instance->code);
+
+    instruction = &instance->instructions[instance->ip];
+    ++instance->ip;
+
+    return instruction;
+}
+
+char *read_string_value(vm_t *instance)
+{
+    int str_len = 0;
+    char *str = NULL;
+    char *reader = NULL;
+
     assert(instance);
 
-    // return instance->code[instance->ip++];
-    return 0;
+    reader = &instance->code[instance->ip];
+    str_len = strlen(reader);
+    str = (char *)malloc(sizeof(char) * (str_len + 1));
+    if (NULL == str)
+    {
+        return NULL;
+    }
+    strcpy(str, reader);
+    instance->ip += (str_len + 1);
+
+    return str;
 }
 
 vm_value_t *get_local_var(vm_t *instance, int index)
@@ -124,6 +160,34 @@ vm_value_t *get_constant_var(vm_t *instance, int index)
     assert(instance);
 
     return &instance->constant_pool[index];
+}
+
+int open_stack_frame(vm_t *instance, vm_method_meta_t *method_meta)
+{
+    unsigned int old_sp = 0;
+    vm_stack_trace_t *new_stack_trace = NULL;
+
+    assert(instance && method_meta);
+
+    old_sp = instance->sp;
+
+    instance->sp = instance->osp + method_meta->num_locals;
+    instance->stack[instance->sp].type = VM_TYPE_INTEGER;
+    instance->stack[instance->sp].value.integer_value = old_sp;
+
+    instance->lap = instance->osp - method_meta->num_params;
+    instance->osp = instance->sp + 1;
+
+    new_stack_trace = (vm_stack_trace_t *)malloc(sizeof(vm_stack_trace_t));
+    if (NULL == new_stack_trace)
+    {
+        return -1;
+    }
+    new_stack_trace->current_method_meta = method_meta;
+    new_stack_trace->prev = instance->stack_trace;
+    instance->stack_trace = new_stack_trace;
+
+    return 0;
 }
 
 int load_bytecode_from_file(const char *file_path, vm_t *instance)
@@ -155,7 +219,7 @@ int load_bytecode_from_file(const char *file_path, vm_t *instance)
 
     file_size = file_stat.st_size;
 
-    instance->code = (vm_instruction_t *)mmap(NULL, file_size, MAP_PERM, MAP_PRIVATE, fd, 0);
+    instance->code = (char *)mmap(NULL, file_size, MAP_PERM, MAP_PRIVATE, fd, 0);
     if (MAP_FAILED == instance->code)
     {
         print_error(instance, "error: could not map file:");
@@ -241,6 +305,6 @@ void free_code(vm_t *instance)
             print_error(instance, "error: could not unmap file");
         }
     }
-
+    instance->instructions = NULL;
     instance->code = NULL;
 }

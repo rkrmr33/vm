@@ -21,7 +21,7 @@ typedef struct vm_method_meta
     enum vm_types return_type;
     int num_locals;
     enum vm_types *local_types;
-    int num_param;
+    int num_params;
     enum vm_types *param_types;
     unsigned int offset;
 } vm_method_meta_t;
@@ -69,7 +69,8 @@ struct vm
 
     opcode_handler opcode_handlers[NUM_OPCODES]; // a lookup table for all the op-code handlers
 
-    vm_instruction_t *code; // a pointer to the bytecode instructions
+    vm_instruction_t *instructions; // a pointer to the code region where the instructions start
+    char *code; // a pointer to the memory region where the bytecode file is mapped
     unsigned int code_size;
 
     FILE *input; // the input file pointer

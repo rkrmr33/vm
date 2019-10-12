@@ -13,6 +13,7 @@
 #define MAGIC_NUM 0xBABEFACE
 #define DEFAULT_HEAP_SIZE 1000000 // 1mb
 #define DEFAULT_STACK_SIZE 100000 // 100kb 
+#define MAIN_METHOD_NAME "main"
 
 #define DEFAULT_OUTPUT stdout
 #define DEFAULT_INPUT stdin
@@ -90,6 +91,7 @@ void vm_free(vm_t *instance)
     free_heap(instance);
     free_stack(instance);
     free_constant_pool(instance);
+    free_stack_trace(instance);
     free_code(instance);
 
     free(instance);
@@ -98,7 +100,7 @@ void vm_free(vm_t *instance)
 
 int vm_run(vm_t *instance)
 {
-    int cur_opcode = 0;
+    vm_instruction_t *instruction = NULL;
     int res = 0;
 
     assert(instance);
@@ -112,8 +114,8 @@ int vm_run(vm_t *instance)
 
     while (VM_RUNNING == instance->state)
     {
-        cur_opcode = read_opcode(instance);
-        res = instance->opcode_handlers[cur_opcode](instance);
+        instruction = read_next_instruction(instance);
+        res = instance->opcode_handlers[instruction->opcode](instance);
     }
 
     return 0;
@@ -123,7 +125,6 @@ int vm_run(vm_t *instance)
 /* STATIC FUNCTIONS */
 static int build_constant_pool(vm_t *instance)
 {
-    char *reader = NULL;
     char cur_opcode = 0;
     int cur_type = 0;
     vm_value_t *cur_value = NULL;
@@ -133,10 +134,8 @@ static int build_constant_pool(vm_t *instance)
 
     assert(instance);
 
-    reader = &((char *)instance->code)[instance->ip];
-
-    instance->constant_pool_size = (unsigned int)*reader;
-    ++reader;
+    instance->constant_pool_size = read_byte_value(instance);
+    printf("cpool size: %d\n", instance->constant_pool_size);
 
     instance->constant_pool = (vm_value_t *)malloc(instance->constant_pool_size * sizeof(vm_value_t));
     if (NULL == instance->constant_pool)
@@ -146,24 +145,18 @@ static int build_constant_pool(vm_t *instance)
 
     for (int i = 0; i < instance->constant_pool_size; ++i)
     {
-        cur_type = (int)*reader;
-        ++reader;
-
+        cur_type = read_byte_value(instance);
         cur_value = &instance->constant_pool[i];
         
         switch (cur_type)
         {
             case VM_TYPE_BYTE:
                 cur_value->type = VM_TYPE_BYTE;
-                cur_value->value.byte_value = *reader;
-                ++reader;
-
+                cur_value->value.byte_value = read_byte_value(instance);
                 break;
             case VM_TYPE_INTEGER:
                 cur_value->type = VM_TYPE_INTEGER;
-                cur_value->value.integer_value = *(int *)reader;
-                reader += sizeof(int);
-
+                cur_value->value.integer_value = read_int_value(instance);
                 break;
             case VM_TYPE_FLOAT:
                 cur_value->type = VM_TYPE_FLOAT;
@@ -179,18 +172,15 @@ static int build_constant_pool(vm_t *instance)
                 break;
             case VM_TYPE_STRING:
                 cur_value->type = VM_TYPE_STRING;
-                str_len = strlen(reader);
-                cur_value->value.string_value = (char *)malloc(sizeof(char) * (str_len + 1));
+                cur_value->value.string_value = read_string_value(instance);
                 if (NULL == cur_value->value.string_value)
                 {
                     return -1;
                 }
-                strcpy(cur_value->value.string_value, reader);
-                reader += (str_len + 1);
                 break;
             case VM_TYPE_REFERENCE:
                 cur_value->type = VM_TYPE_REFERENCE;
-                // TODO: add support for double
+                // TODO: add support for reference types
                 break;
             case VM_TYPE_METHOD:
                 cur_value->type = VM_TYPE_METHOD;
@@ -200,58 +190,55 @@ static int build_constant_pool(vm_t *instance)
                     return -1;
                 }
 
-                str_len = strlen(reader);
-                cur_method->name = (char *)malloc(sizeof(char) * (str_len + 1));
+                cur_method->name = read_string_value(instance);
                 if (NULL == cur_method->name)
                 {
                     return -1;
                 }
-                strcpy(cur_method->name, reader);
-                reader += (str_len + 1);
 
-                cur_method->return_type = (int)*reader;
-                ++reader;
+                cur_method->return_type = read_byte_value(instance);
 
-                cur_method->num_locals = (int)*reader;
-                ++reader;
-
+                cur_method->num_locals = read_byte_value(instance);
                 cur_method->local_types = (enum vm_types *)malloc(sizeof(int) * cur_method->num_locals);
                 if (NULL == cur_method->local_types) 
                 {
                     return -1;
                 }
-
                 for (int i = 0; i < cur_method->num_locals; ++i)
                 {
-                    cur_method->local_types[i] = (int)*reader;
-                    ++reader;
+                    cur_method->local_types[i] = read_byte_value(instance);
                 }
 
-                cur_method->num_param = (int)*reader;
-                ++reader;
-
-                cur_method->param_types = (enum vm_types *)malloc(sizeof(int) * cur_method->num_param);
+                cur_method->num_params = read_byte_value(instance);
+                cur_method->param_types = (enum vm_types *)malloc(sizeof(int) * cur_method->num_params);
                 if (NULL == cur_method->param_types) 
                 {
                     return -1;
                 }
-
-                for (int i = 0; i < cur_method->num_param; ++i)
+                for (int i = 0; i < cur_method->num_params; ++i)
                 {
-                    cur_method->param_types[i] = (int)*reader;
-                    ++reader;
+                    cur_method->param_types[i] = read_byte_value(instance);
                 }
 
-                cur_method->offset = *(int *)reader;
-                reader += sizeof(int);
+                cur_method->offset = read_int_value(instance);
 
                 cur_value->value.method_value = cur_method;
+
+                if (-1 == check_main_method(instance, MAIN_METHOD_NAME, cur_method))
+                {
+                    return -1;
+                }
 
                 break;
         }
 
         print_vm_value(cur_value);
     }
+
+    // move to point to first instruction
+    instance->instructions = (vm_instruction_t *)&instance->code[instance->ip];
+    // reset to read instructions
+    instance->ip = 0; 
     
     return 0;
 }
@@ -285,6 +272,7 @@ static int init_vm_fields(vm_t *instance,
     }
 
     instance->stack_trace = NULL;
+    instance->instructions = NULL;
 
     instance->sp = 0;
     instance->ip = 0;
