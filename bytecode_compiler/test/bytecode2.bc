@@ -5,9 +5,26 @@ S " world"
 S "meow"
 S "Hello roi, I am the VM"
 M "main" I 3IIS 0
-M "foo" I 1I 1I
+M "add" I 1I 2II
 
 main:
-    @
+    ipush 100
+    istore 0
+    ipush 50
+    istore 1
+    cload 0
+    sstore 2
+    sload 2
+    sprint @ should print "hello"
+    iload 0
+    iload 1
+    call 6 @ calling add with 50 and 100, should return 150
+    iprint @ should print 150
 
-foo:
+add:
+    iload 0
+    iload 1
+    iadd
+    istore 2
+    iload 2
+    iret

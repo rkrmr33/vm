@@ -12,7 +12,7 @@ public class BytecodeCompiler {
             outputFile = args[1];
 
             try {
-                Compiler2 compiler = new Compiler2(inputFile, outputFile);
+                Compiler compiler = new Compiler(inputFile, outputFile);
                 compiler.compile();
             } catch (FileNotFoundException e) {
                 System.out.println("file not found: " + inputFile);
@@ -20,10 +20,10 @@ public class BytecodeCompiler {
             } catch (IOException e) {
                 System.out.println("invalid file name: " + outputFile);
                 System.exit(1);
-            } catch (Compiler2.IllegalOpcodeException e) {
+            } catch (Compiler.IllegalOpcodeException e) {
                 System.out.println(e);
                 System.exit(1);
-            } catch (Compiler2.ConstantPoolException e) {
+            } catch (Compiler.ConstantPoolException e) {
                 System.out.println(e);
                 System.exit(1);
             }

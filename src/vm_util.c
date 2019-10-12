@@ -13,9 +13,14 @@
 
 int validate_magic_number(vm_t *instance)
 {
+    int *reader = NULL;
+
     assert(instance && instance->code);
 
-    return instance->magic_num != read_int_value(instance);
+    reader = &((int *)instance->code)[instance->ip];
+    instance->ip += sizeof(int);
+
+    return instance->magic_num != *reader;
 }
 
 void print_vm_value(vm_value_t *vm_value)
@@ -24,20 +29,36 @@ void print_vm_value(vm_value_t *vm_value)
 
     switch (vm_value->type)
     {
-        case INTEGER_TYPE:
+        case VM_TYPE_BYTE:
+            printf("{ type: byte, value: %d}\n", vm_value->value.byte_value);
+            break;
+
+        case VM_TYPE_INTEGER:
             printf("{ type: int, value: %d}\n", vm_value->value.integer_value);
             break;
 
-        case FLOAT_TYPE:
+        case VM_TYPE_FLOAT:
             printf("{ type: float, value: %f}\n", vm_value->value.float_value);
             break;
+        
+        case VM_TYPE_LONG:
+            printf("{ type: long, value: %ld}\n", vm_value->value.long_value);
+            break;
 
-        case STRING_TYPE:
+        case VM_TYPE_DOUBLE:
+            printf("{ type: double, value: %lf}\n", vm_value->value.double_value);
+            break;
+
+        case VM_TYPE_STRING:
             printf("{ type: string, value: \"%s\"}\n", vm_value->value.string_value);
             break;
 
-        case REFERENCE_TYPE:
+        case VM_TYPE_REFERENCE:
             printf("{ type: ref, value: %p}\n", vm_value->value.reference_value);
+            break;
+        
+        case VM_TYPE_METHOD:
+            printf("{ type: method, value: \"%s\"}\n", vm_value->value.method_value->name);
             break;
     
         default:
@@ -59,6 +80,18 @@ void print_output(vm_t *instance, const char *message)
     fprintf(instance->output, "%s", message);
 }
 
+int read_byte_value(vm_t *instance)
+{
+    char *reader = NULL;
+
+    assert(instance && instance->code);
+
+    reader = &((char *)instance->code)[instance->ip];
+    ++instance->ip;
+
+    return *reader;
+}
+
 int read_int_value(vm_t *instance)
 {
     int val = 0;
@@ -71,30 +104,12 @@ int read_int_value(vm_t *instance)
     return val;
 }
 
-char *read_string_value(vm_t *instance)
-{
-    int len = 0;
-    char *string = NULL;
-
-    assert(instance);
-
-    len = strlen(&instance->code[instance->ip]);
-    string = malloc(sizeof(char) * (len + 1));
-    if (NULL == string)
-    {
-        return NULL;
-    }
-    strcpy(string, &instance->code[instance->ip]);
-    instance->ip += (len + 1);
-
-    return string;
-}
-
 char read_opcode(vm_t *instance)
 {
     assert(instance);
 
-    return instance->code[instance->ip++];
+    // return instance->code[instance->ip++];
+    return 0;
 }
 
 vm_value_t *get_local_var(vm_t *instance, int index)
@@ -140,7 +155,7 @@ int load_bytecode_from_file(const char *file_path, vm_t *instance)
 
     file_size = file_stat.st_size;
 
-    instance->code = (char *)mmap(NULL, file_size, MAP_PERM, MAP_PRIVATE, fd, 0);
+    instance->code = (vm_instruction_t *)mmap(NULL, file_size, MAP_PERM, MAP_PRIVATE, fd, 0);
     if (MAP_FAILED == instance->code)
     {
         print_error(instance, "error: could not map file:");
@@ -169,6 +184,19 @@ void free_stack(vm_t *instance)
     instance->stack = NULL;
 }
 
+void free_stack_trace(vm_t *instance)
+{
+    vm_stack_trace_t *prev = NULL;
+    assert(instance);
+
+    while (NULL != instance->stack_trace)
+    {
+        prev = instance->stack_trace->prev;
+        free(instance->stack_trace);
+        instance->stack_trace = prev;
+    }
+}
+
 void free_constant_pool(vm_t *instance) 
 {
     vm_value_t cur_value = {0};
@@ -178,10 +206,21 @@ void free_constant_pool(vm_t *instance)
     for (int i = 0; i < instance->constant_pool_size; ++i)
     {
         cur_value = instance->constant_pool[i];
-        if (STRING_TYPE == cur_value.type) // TODO: add reference type support 
+        if (VM_TYPE_STRING == cur_value.type) // TODO: add reference type support 
         {
             free(cur_value.value.string_value);
             cur_value.value.string_value = NULL;
+        }
+        else if (VM_TYPE_METHOD == cur_value.type)
+        {
+            free(cur_value.value.method_value->name);
+            cur_value.value.method_value->name = NULL;
+            free(cur_value.value.method_value->local_types);
+            cur_value.value.method_value->local_types = NULL;
+            free(cur_value.value.method_value->param_types);
+            cur_value.value.method_value->param_types = NULL;
+            free(cur_value.value.method_value);
+            cur_value.value.method_value = NULL;
         }
     }
 

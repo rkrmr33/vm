@@ -123,19 +123,20 @@ int vm_run(vm_t *instance)
 /* STATIC FUNCTIONS */
 static int build_constant_pool(vm_t *instance)
 {
+    char *reader = NULL;
     char cur_opcode = 0;
+    int cur_type = 0;
     vm_value_t *cur_value = NULL;
+    vm_method_meta_t *cur_method = NULL;
+    int str_len = 0;
     int size = 0;
 
     assert(instance);
 
-    cur_opcode = read_opcode(instance);
+    reader = &((char *)instance->code)[instance->ip];
 
-    if (OP_CONST != cur_opcode) {
-        return -1;
-    }
-
-    instance->constant_pool_size = read_int_value(instance);
+    instance->constant_pool_size = (unsigned int)*reader;
+    ++reader;
 
     instance->constant_pool = (vm_value_t *)malloc(instance->constant_pool_size * sizeof(vm_value_t));
     if (NULL == instance->constant_pool)
@@ -145,27 +146,111 @@ static int build_constant_pool(vm_t *instance)
 
     for (int i = 0; i < instance->constant_pool_size; ++i)
     {
-        cur_opcode = read_opcode(instance);
-        cur_value = &(instance->constant_pool[i]);
+        cur_type = (int)*reader;
+        ++reader;
+
+        cur_value = &instance->constant_pool[i];
         
-        switch (cur_opcode)
+        switch (cur_type)
         {
-            case OP_SCONST: // STRING_TYPE constant
-                cur_value->type = STRING_TYPE;
-                cur_value->value.string_value = read_string_value(instance);
+            case VM_TYPE_BYTE:
+                cur_value->type = VM_TYPE_BYTE;
+                cur_value->value.byte_value = *reader;
+                ++reader;
+
+                break;
+            case VM_TYPE_INTEGER:
+                cur_value->type = VM_TYPE_INTEGER;
+                cur_value->value.integer_value = *(int *)reader;
+                reader += sizeof(int);
+
+                break;
+            case VM_TYPE_FLOAT:
+                cur_value->type = VM_TYPE_FLOAT;
+                // TODO: add support for float
+                break;
+            case VM_TYPE_LONG:
+                cur_value->type = VM_TYPE_LONG;
+                // TODO: add support for long
+                break;
+            case VM_TYPE_DOUBLE:
+                cur_value->type = VM_TYPE_DOUBLE;
+                // TODO: add support for double
+                break;
+            case VM_TYPE_STRING:
+                cur_value->type = VM_TYPE_STRING;
+                str_len = strlen(reader);
+                cur_value->value.string_value = (char *)malloc(sizeof(char) * (str_len + 1));
                 if (NULL == cur_value->value.string_value)
                 {
                     return -1;
                 }
+                strcpy(cur_value->value.string_value, reader);
+                reader += (str_len + 1);
                 break;
-            case OP_ICONST: // INTEGER_TYPE constant
-                cur_value->type = INTEGER_TYPE;
-                cur_value->value.integer_value = read_int_value(instance);
+            case VM_TYPE_REFERENCE:
+                cur_value->type = VM_TYPE_REFERENCE;
+                // TODO: add support for double
                 break;
-            default:
-                print_error(instance, "constant_pool_load: unknown type");
-                return -1;
+            case VM_TYPE_METHOD:
+                cur_value->type = VM_TYPE_METHOD;
+                cur_method = (vm_method_meta_t *)malloc(sizeof(vm_method_meta_t));
+                if (NULL == cur_method) 
+                {
+                    return -1;
+                }
+
+                str_len = strlen(reader);
+                cur_method->name = (char *)malloc(sizeof(char) * (str_len + 1));
+                if (NULL == cur_method->name)
+                {
+                    return -1;
+                }
+                strcpy(cur_method->name, reader);
+                reader += (str_len + 1);
+
+                cur_method->return_type = (int)*reader;
+                ++reader;
+
+                cur_method->num_locals = (int)*reader;
+                ++reader;
+
+                cur_method->local_types = (enum vm_types *)malloc(sizeof(int) * cur_method->num_locals);
+                if (NULL == cur_method->local_types) 
+                {
+                    return -1;
+                }
+
+                for (int i = 0; i < cur_method->num_locals; ++i)
+                {
+                    cur_method->local_types[i] = (int)*reader;
+                    ++reader;
+                }
+
+                cur_method->num_param = (int)*reader;
+                ++reader;
+
+                cur_method->param_types = (enum vm_types *)malloc(sizeof(int) * cur_method->num_param);
+                if (NULL == cur_method->param_types) 
+                {
+                    return -1;
+                }
+
+                for (int i = 0; i < cur_method->num_param; ++i)
+                {
+                    cur_method->param_types[i] = (int)*reader;
+                    ++reader;
+                }
+
+                cur_method->offset = *(int *)reader;
+                reader += sizeof(int);
+
+                cur_value->value.method_value = cur_method;
+
+                break;
         }
+
+        print_vm_value(cur_value);
     }
     
     return 0;
@@ -187,20 +272,25 @@ static int init_vm_fields(vm_t *instance,
     instance->heap_size = (0 == heap_size ? DEFAULT_HEAP_SIZE : heap_size);
     instance->stack_size = (0 == stack_size ? DEFAULT_STACK_SIZE : stack_size);
 
-    instance->heap = malloc(sizeof(char) * instance->heap_size);
+    instance->heap = (char *)malloc(sizeof(char) * instance->heap_size);
     if (NULL == instance->heap)
     {
         return -1;
     }
 
-    instance->stack = malloc(sizeof(char) * instance->stack_size);
+    instance->stack = (vm_value_t *)malloc(sizeof(char) * instance->stack_size);
     if (NULL == instance->stack)
     {
         return -1;
     }
 
-    instance->local_vars_arr = (vm_value_t *)instance->stack;
-    instance->operands_stack = (vm_value_t *)instance->stack + 1;
+    instance->stack_trace = NULL;
+
+    instance->sp = 0;
+    instance->ip = 0;
+    instance->lap = 0;
+    instance->osp = 0;
+
     init_opcode_handlers(instance->opcode_handlers);
 
     instance->output = (NULL == output ? DEFAULT_OUTPUT : output);

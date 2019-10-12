@@ -14,9 +14,9 @@ $(LIB): $(OBJS)
 .PHONY: run
 run: build_test compiler
 	@echo "[Compiling...]"
-	@java -jar bytecode_compiler/BytecodeCompiler.jar bytecode_compiler/test/bytecode1.bc bytecode_compiler/test/bytecode1.bcc
+	@java -jar bytecode_compiler/BytecodeCompiler.jar bytecode_compiler/test/bytecode2.bc bytecode_compiler/test/bytecode2.bcc
 	@echo "[Running...]"
-	@bin/vm_test bytecode_compiler/test/bytecode1.bcc
+	@bin/vm_test bytecode_compiler/test/bytecode2.bcc
 
 .PHONY: compile
 compile: compiler
