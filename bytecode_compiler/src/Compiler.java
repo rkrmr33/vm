@@ -275,14 +275,19 @@ public class Compiler {
     }
 
     private void writeNoArgOpcode(int code) throws IOException {
-        outputBytes.add((byte)code);
+        for (Byte b : getIntBytes(code)) {
+            outputBytes.add(b);
+        }
+        
         for (Byte b : getIntBytes(0x0)) {
             outputBytes.add(b);
         }
     }
 
     private void writeSingleIntOpcode(Scanner scn, int code) throws IOException {
-        outputBytes.add((byte)code);
+        for (Byte b : getIntBytes(code)) {
+            outputBytes.add(b);
+        }
 
         for (Byte b : getIntBytes(scn.nextInt())) {
             outputBytes.add(b);

@@ -24,6 +24,7 @@ typedef struct vm_method_meta
     int num_params;
     enum vm_types *param_types;
     unsigned int offset;
+    unsigned int ip;
 } vm_method_meta_t;
 
 typedef struct vm_value
@@ -42,11 +43,11 @@ typedef struct vm_value
     } value;
 } vm_value_t;
 
-typedef struct vm_stack_trace 
+typedef struct vm_stack_frame
 {
-    vm_method_meta_t *current_method_meta;
-    struct vm_stack_trace *prev;
-} vm_stack_trace_t;
+    vm_method_meta_t *method_meta;
+    struct vm_stack_frame *prev;
+} vm_stack_frame_t;
 
 struct vm
 {
@@ -59,7 +60,7 @@ struct vm
     vm_value_t *stack; // call stack
     unsigned int stack_size;
 
-    vm_stack_trace_t *stack_trace; // a pointer to a linked-list of method data
+    vm_stack_frame_t *stack_trace; // a pointer to a linked-list of method data
 
     char *heap; // contains all objects and arrays
     size_t heap_size;

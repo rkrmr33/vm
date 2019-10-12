@@ -6,8 +6,6 @@
 #include <stdlib.h>    /* free      */
 #include <string.h>    /* strlen    */
 
-#include "vm_impl.h"   /* vm_method_meta_t */
-
 #include "vm_util.h"
 
 #define FILE_PERM O_RDONLY
@@ -24,11 +22,39 @@ int check_main_method(vm_t *instance,
                       const char *main_method_name, 
                       vm_method_meta_t *method_meta)
 {
+    unsigned int old_sp = 0;
+    int num_locals = 0, num_params = 0;
+    vm_stack_frame_t *new_stack_frame = NULL;
+
     assert(instance && main_method_name && method_meta);
 
     if (0 == strcmp(main_method_name, method_meta->name))
     {
-        return open_stack_frame(instance, method_meta);
+        old_sp = instance->sp;
+        instance->sp = instance->osp + method_meta->num_locals;
+        instance->stack[instance->sp].type = VM_TYPE_INTEGER;
+        instance->stack[instance->sp].value.integer_value = old_sp;
+
+        instance->lap = instance->osp - method_meta->num_params;
+        instance->osp = instance->sp + 1;
+
+        new_stack_frame = (vm_stack_frame_t *)malloc(sizeof(vm_stack_frame_t));
+        if (NULL == new_stack_frame)
+        {
+            return -1;
+        }
+        new_stack_frame->method_meta = method_meta;
+        new_stack_frame->prev = instance->stack_trace;
+        instance->stack_trace = new_stack_frame;
+
+        num_locals = method_meta->num_locals;
+        num_params = method_meta->num_params;
+
+        // allocate local variables
+        for (int i = 0; i < num_locals; ++i)
+        {
+            instance->stack[instance->lap + i + num_params].type = method_meta->local_types[i];
+        }
     }
 
     return 0;
@@ -69,11 +95,37 @@ void print_vm_value(vm_value_t *vm_value)
             break;
         
         case VM_TYPE_METHOD:
-            printf("{ type: method, value: \"%s\"}\n", vm_value->value.method_value->name);
+            printf("{ type: method, value: \"%s\", offset: %u}\n", 
+                vm_value->value.method_value->name, vm_value->value.method_value->offset);
             break;
     
         default:
             break;
+    }
+}
+
+char *get_type_name(int type)
+{
+    switch (type)
+    {
+        case VM_TYPE_BYTE:
+            return "byte";
+        case VM_TYPE_INTEGER:
+            return "integer";
+        case VM_TYPE_FLOAT:
+            return "float";
+        case VM_TYPE_LONG:
+            return "long";
+        case VM_TYPE_DOUBLE:
+            return "double";
+        case VM_TYPE_STRING:
+            return "string";
+        case VM_TYPE_REFERENCE:
+            return "reference";
+        case VM_TYPE_METHOD:
+            return "method";    
+        default:
+            return "unknown type";
     }
 }
 
@@ -97,7 +149,7 @@ int read_byte_value(vm_t *instance)
 
     assert(instance && instance->code);
 
-    reader = &((char *)instance->code)[instance->ip];
+    reader = &instance->code[instance->ip];
     ++instance->ip;
 
     return *reader;
@@ -109,7 +161,7 @@ int read_int_value(vm_t *instance)
     
     assert(instance);
 
-    reader = &((int *)instance->code)[instance->ip];
+    reader = (int *)&instance->code[instance->ip];
     instance->ip += sizeof(int);
 
     return *reader;
@@ -125,6 +177,13 @@ vm_instruction_t *read_next_instruction(vm_t *instance)
     ++instance->ip;
 
     return instruction;
+}
+
+int get_instruction_arg(vm_t *instance)
+{
+    assert(instance && instance->instructions);
+
+    return instance->instructions[instance->ip - 1].arg;
 }
 
 char *read_string_value(vm_t *instance)
@@ -148,6 +207,13 @@ char *read_string_value(vm_t *instance)
     return str;
 }
 
+int get_operand_stack_size(vm_t *instance)
+{
+    assert(instance && instance->stack);
+
+    return instance->osp - instance->sp - 1;
+}
+
 vm_value_t *get_local_var(vm_t *instance, int index)
 {
     assert(instance);
@@ -165,7 +231,8 @@ vm_value_t *get_constant_var(vm_t *instance, int index)
 int open_stack_frame(vm_t *instance, vm_method_meta_t *method_meta)
 {
     unsigned int old_sp = 0;
-    vm_stack_trace_t *new_stack_trace = NULL;
+    int num_locals = 0, num_params = 0;
+    vm_stack_frame_t *new_stack_frame = NULL;
 
     assert(instance && method_meta);
 
@@ -178,16 +245,74 @@ int open_stack_frame(vm_t *instance, vm_method_meta_t *method_meta)
     instance->lap = instance->osp - method_meta->num_params;
     instance->osp = instance->sp + 1;
 
-    new_stack_trace = (vm_stack_trace_t *)malloc(sizeof(vm_stack_trace_t));
-    if (NULL == new_stack_trace)
+    new_stack_frame = (vm_stack_frame_t *)malloc(sizeof(vm_stack_frame_t));
+    if (NULL == new_stack_frame)
     {
         return -1;
     }
-    new_stack_trace->current_method_meta = method_meta;
-    new_stack_trace->prev = instance->stack_trace;
-    instance->stack_trace = new_stack_trace;
+    new_stack_frame->method_meta = method_meta;
+    new_stack_frame->prev = instance->stack_trace;
+    instance->stack_trace = new_stack_frame;
+
+    num_locals = method_meta->num_locals;
+    num_params = method_meta->num_params;
+
+    // validate argument types
+    for (int i = 0; i < num_params; ++i)
+    {
+        if (instance->stack[instance->lap + i].type != method_meta->param_types[i])
+        {
+            fprintf(instance->err, "wrong argument types for method: %s\n", method_meta->name);
+            fprintf(instance->err, "expected type: %s, got type: %s\n",
+                get_type_name(method_meta->param_types[i]),
+                get_type_name(instance->stack[instance->lap + i].type));
+
+            return -1;
+        }
+    }
+
+    // allocate local variables
+    for (int i = 0; i < num_locals; ++i)
+    {
+        instance->stack[instance->lap + i + num_params].type = method_meta->local_types[i];
+    }
+
+    // save last ip for when you return
+    instance->stack_trace->prev->method_meta->ip = instance->ip;
 
     return 0;
+}
+
+void pop_stack_frame(vm_t *instance)
+{
+    vm_stack_frame_t *prev_frame = NULL;
+    int prev_osp = 0, prev_lap = 0, prev_sp = 0;
+    int prev_num_locals = 0, prev_num_params = 0;
+
+    assert(instance);
+
+    prev_frame = instance->stack_trace->prev;
+    if (NULL == prev_frame)
+    {
+        instance->state = VM_FINISHED; // returned from main
+
+        return;
+    }
+
+    prev_osp = instance->lap;
+    prev_sp = instance->stack[instance->sp].value.integer_value;
+    prev_num_locals = prev_frame->method_meta->num_locals;
+    prev_num_params = prev_frame->method_meta->num_params;
+    prev_lap = prev_osp - prev_num_locals + prev_num_params;
+
+    instance->osp = prev_osp;
+    instance->lap = prev_lap;
+    instance->sp = prev_sp;
+    instance->ip = prev_frame->method_meta->ip;
+
+    prev_frame = instance->stack_trace->prev;
+    free(instance->stack_trace);
+    instance->stack_trace = prev_frame;
 }
 
 int load_bytecode_from_file(const char *file_path, vm_t *instance)
@@ -248,9 +373,9 @@ void free_stack(vm_t *instance)
     instance->stack = NULL;
 }
 
-void free_stack_trace(vm_t *instance)
+void free_stack_frames(vm_t *instance)
 {
-    vm_stack_trace_t *prev = NULL;
+    vm_stack_frame_t *prev = NULL;
     assert(instance);
 
     while (NULL != instance->stack_trace)

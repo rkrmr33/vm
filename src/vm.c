@@ -91,7 +91,7 @@ void vm_free(vm_t *instance)
     free_heap(instance);
     free_stack(instance);
     free_constant_pool(instance);
-    free_stack_trace(instance);
+    free_stack_frames(instance);
     free_code(instance);
 
     free(instance);
@@ -109,13 +109,14 @@ int vm_run(vm_t *instance)
     {
         print_error(instance, "vm is not at ready state");
     }
-
     instance->state = VM_RUNNING;
 
-    while (VM_RUNNING == instance->state)
+    while (VM_RUNNING == instance->state && 0 == res)
     {
+        //printf("function: %s\n", instance->stack_trace->method_meta->name);
         instruction = read_next_instruction(instance);
         res = instance->opcode_handlers[instruction->opcode](instance);
+        //printf("[+] operand stack size: %d, instruction: %x\n", get_operand_stack_size(instance), instruction->opcode);
     }
 
     return 0;
@@ -135,7 +136,6 @@ static int build_constant_pool(vm_t *instance)
     assert(instance);
 
     instance->constant_pool_size = read_byte_value(instance);
-    printf("cpool size: %d\n", instance->constant_pool_size);
 
     instance->constant_pool = (vm_value_t *)malloc(instance->constant_pool_size * sizeof(vm_value_t));
     if (NULL == instance->constant_pool)
@@ -231,10 +231,14 @@ static int build_constant_pool(vm_t *instance)
 
                 break;
         }
-
-        print_vm_value(cur_value);
     }
 
+    if (NULL == instance->stack_trace) 
+    {
+        print_error(instance, "no main method was found!");
+        
+        return -1;
+    }
     // move to point to first instruction
     instance->instructions = (vm_instruction_t *)&instance->code[instance->ip];
     // reset to read instructions

@@ -20,6 +20,7 @@ main:
     iload 1
     call 6 @ calling add with 50 and 100, should return 150
     iprint @ should print 150
+    ret
 
 add:
     iload 0
